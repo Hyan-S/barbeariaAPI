@@ -33,20 +33,52 @@ if (jwtSecret.Length < 32)
     throw new InvalidOperationException("Jwt:Secret precisa de no minimo 32 caracteres");
 
 // Em producao, recusar subir com config de exemplo: segredo conhecido = token de admin forjavel.
+// Todos os problemas sao reunidos numa mensagem so — descobrir um por deploy custa
+// um ciclo de build inteiro por erro.
 if (!builder.Environment.IsDevelopment())
 {
-    if (jwtSecret.Contains("troque-esta-chave"))
-        throw new InvalidOperationException(
-            "Jwt:Secret ainda e o valor de exemplo. Defina um segredo aleatorio de 32+ caracteres.");
-
     var conexao = builder.Configuration.GetConnectionString("Postgres") ?? "";
-    if (conexao.Contains("Password=postgres") || conexao.Contains("localhost"))
-        throw new InvalidOperationException(
-            "ConnectionStrings:Postgres aponta para o banco local de exemplo em producao.");
+    var problemas = new List<string>();
 
-    if (Environment.GetEnvironmentVariable("ADMIN_SENHA") is null)
+    if (jwtSecret.Contains("troque-esta-chave"))
+        problemas.Add("Jwt__Secret ainda e o valor de exemplo. Use 32+ caracteres aleatorios.");
+
+    if (string.IsNullOrWhiteSpace(conexao))
+        problemas.Add("ConnectionStrings__Postgres esta vazia.");
+    else if (conexao.StartsWith("postgres", StringComparison.OrdinalIgnoreCase) && conexao.Contains("://"))
+        problemas.Add(
+            "ConnectionStrings__Postgres esta no formato URI do provedor. O Npgsql usa " +
+            "chave=valor: Host=...;Database=...;Username=...;Password=...;SSL Mode=Require");
+    else if (conexao.Contains("Password=postgres") || conexao.Contains("localhost"))
+        problemas.Add("ConnectionStrings__Postgres aponta para o banco local de exemplo.");
+
+    if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ADMIN_SENHA")))
+        problemas.Add("ADMIN_SENHA nao definida: o seed criaria o admin com a senha padrao.");
+
+    if (problemas.Count > 0)
+    {
+        // "definida" so quando veio do ambiente: cair no appsettings.json e o mesmo
+        // que nao ter configurado, porque la esta o valor de exemplo.
+        static string Situacao(string variavel)
+        {
+            var v = Environment.GetEnvironmentVariable(variavel);
+            return string.IsNullOrWhiteSpace(v) ? "NAO DEFINIDA no Render" : "definida";
+        }
+
+        Console.WriteLine(
+            "\n===== CONFIGURACAO INCOMPLETA — a aplicacao nao vai subir =====\n" +
+            string.Join("\n", problemas.Select(p => "  - " + p)) +
+            "\n\n  Variaveis de ambiente (valores nunca sao exibidos):\n" +
+            $"    ConnectionStrings__Postgres : {Situacao("ConnectionStrings__Postgres")}\n" +
+            $"    Jwt__Secret                 : {Situacao("Jwt__Secret")}\n" +
+            $"    ADMIN_SENHA                 : {Situacao("ADMIN_SENHA")}\n" +
+            $"    ADMIN_EMAIL                 : {Situacao("ADMIN_EMAIL")}\n" +
+            $"    App__UrlPublica             : {Situacao("App__UrlPublica")}\n" +
+            "===============================================================\n");
+
         throw new InvalidOperationException(
-            "ADMIN_SENHA nao definida: o seed criaria o admin com a senha padrao 'admin123'.");
+            $"Configuracao invalida em producao: {problemas.Count} problema(s) acima.");
+    }
 }
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

@@ -7,9 +7,10 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     plan: free
-    # Mesma regiao do banco (Neon us-east-2 = AWS Ohio). App e banco em
-    # continentes diferentes somam latencia em toda consulta.
-    region: ohio
+    # Regiao padrao do Render, disponivel em todos os planos. Ohio ficaria mais
+    # perto do Neon (us-east-2), mas nao ha garantia documentada de free tier la
+    # — a diferenca de latencia nao paga o risco de nao subir.
+    region: oregon
     healthCheckPath: /health
     autoDeploy: true
     envVars:
