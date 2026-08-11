@@ -43,14 +43,26 @@ if (!builder.Environment.IsDevelopment())
     if (jwtSecret.Contains("troque-esta-chave"))
         problemas.Add("Jwt__Secret ainda e o valor de exemplo. Use 32+ caracteres aleatorios.");
 
+    // Quebra de linha ou caractere de moldura significa que o valor foi copiado de
+    // dentro de uma tabela renderizada no terminal, trazendo as bordas junto. O erro
+    // do Npgsql para esse caso e ilegivel ("Couldn't set username |").
+    var sujeira = conexao.Where(c => c is '\n' or '\r' or '\t' || c > '~').Distinct().ToArray();
+
     if (string.IsNullOrWhiteSpace(conexao))
         problemas.Add("ConnectionStrings__Postgres esta vazia.");
+    else if (sujeira.Length > 0)
+        problemas.Add(
+            "ConnectionStrings__Postgres contem quebra de linha ou caractere estranho — " +
+            "sinal de valor copiado de dentro de uma tabela do terminal, com as bordas junto. " +
+            "Cole em UMA linha so, sem espacos nas pontas.");
     else if (conexao.StartsWith("postgres", StringComparison.OrdinalIgnoreCase) && conexao.Contains("://"))
         problemas.Add(
             "ConnectionStrings__Postgres esta no formato URI do provedor. O Npgsql usa " +
             "chave=valor: Host=...;Database=...;Username=...;Password=...;SSL Mode=Require");
     else if (conexao.Contains("Password=postgres") || conexao.Contains("localhost"))
         problemas.Add("ConnectionStrings__Postgres aponta para o banco local de exemplo.");
+    else if (!conexao.Contains("Host=", StringComparison.OrdinalIgnoreCase))
+        problemas.Add("ConnectionStrings__Postgres nao tem 'Host='. Confira o formato do Npgsql.");
 
     if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ADMIN_SENHA")))
         problemas.Add("ADMIN_SENHA nao definida: o seed criaria o admin com a senha padrao.");
