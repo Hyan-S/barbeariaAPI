@@ -1,0 +1,13 @@
+**/bin/
+**/obj/
+**/.vs/
+**/.git/
+**/*.user
+.git
+.gitignore
+README.md
+DEPLOY-SEGURANCA.md
+_conversas/
+**/appsettings.*.Local.json
+.env
+*.env

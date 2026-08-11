@@ -1,0 +1,38 @@
+# Infra como codigo do Render. Ao conectar o repo, o Render le este arquivo e cria
+# o servico ja configurado. Os segredos NAO ficam aqui: sao marcados sync:false e
+# preenchidos no painel, ou gerados pelo proprio Render.
+services:
+  - type: web
+    name: barbearia-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: oregon
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      # Dispara os gates de seguranca e o HTTPS/HSTS.
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+
+      # O Render gera um segredo aleatorio forte; nunca sera o valor de exemplo.
+      - key: Jwt__Secret
+        generateValue: true
+
+      # String do Neon, formato Npgsql com SSL Mode=Require. Preenchida no painel.
+      - key: ConnectionStrings__Postgres
+        sync: false
+
+      # Senha do primeiro admin. Sem ela a app recusa subir (evita o admin123 padrao).
+      - key: ADMIN_SENHA
+        sync: false
+
+      - key: ADMIN_EMAIL
+        sync: false
+
+      # URL publica (dominio ou .onrender.com). Entra no link do WhatsApp e no CORS.
+      - key: App__UrlPublica
+        sync: false
+
+      - key: App__OrigensPermitidas
+        sync: false

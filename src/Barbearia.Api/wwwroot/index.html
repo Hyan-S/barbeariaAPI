@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entrar</title>
+<!-- Antes do CSS: evita piscar branco ao abrir no tema escuro. -->
+<script>document.documentElement.dataset.tema =
+  localStorage.getItem('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro');</script>
+<link rel="stylesheet" href="app.css?v=202608091806">
+<style>
+  /* min-height, nao height: com height fixo o conteudo estoura e o rodape some. */
+  body {
+    min-height: 100dvh;
+    display: grid;
+    grid-template-columns: 1.05fr 1fr;
+  }
+
+  /* Escuro nos dois temas: e superficie de marca, nao de interface. */
+  .marca {
+    position: relative;
+    overflow: hidden;
+    padding: 52px 48px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 40px;
+    color: #eceef2;
+    background:
+      radial-gradient(120% 90% at 15% 0%, #262a36 0%, transparent 55%),
+      radial-gradient(90% 70% at 85% 100%, #2b2418 0%, transparent 60%),
+      #0d0f14;
+  }
+
+  .marca::before {
+    content: "";
+    position: absolute;
+    inset: -30%;
+    background: repeating-linear-gradient(-45deg,
+      transparent 0 22px, rgba(201, 161, 91, .05) 22px 24px);
+    pointer-events: none;
+  }
+
+  .marca > * { position: relative; }
+
+  .logo { display: flex; align-items: center; gap: 13px; }
+
+  .logo-mark {
+    width: 42px; height: 42px;
+    display: grid; place-items: center;
+    border-radius: 11px;
+    background: linear-gradient(145deg, #dcb877, #a8823f);
+    box-shadow: 0 6px 18px rgba(201, 161, 91, .22);
+  }
+
+  .logo-mark svg { width: 23px; height: 23px; stroke: #1a1408; }
+  .logo-nome { font-size: 16px; font-weight: 650; }
+
+  .chamada h1 {
+    font-size: clamp(28px, 3.2vw, 41px);
+    line-height: 1.12;
+    margin: 0 0 15px;
+    font-weight: 680;
+    letter-spacing: -.022em;
+  }
+
+  .chamada h1 em { font-style: normal; color: #c9a15b; }
+  .chamada p { margin: 0; color: #99a1b0; font-size: 16px; max-width: 40ch; }
+
+  .pontos { list-style: none; margin: 32px 0 0; padding: 0; display: grid; gap: 12px; }
+  .pontos li { display: flex; align-items: center; gap: 11px; font-size: 14.5px; color: #99a1b0; }
+  .pontos svg { width: 17px; height: 17px; stroke: #c9a15b; flex: none; }
+  .rodape { font-size: 13px; color: #6d7482; margin: 0; }
+
+  .painel { display: grid; place-items: center; padding: 44px 28px; position: relative; }
+  .canto { position: absolute; top: 18px; right: 18px; }
+  .caixa { width: 100%; max-width: 372px; }
+  .caixa h2 { font-size: 25px; margin: 0 0 6px; letter-spacing: -.015em; }
+  .caixa .sub { color: var(--texto-suave); font-size: 14.5px; margin: 0 0 28px; }
+
+  .entrada { position: relative; display: flex; align-items: center; }
+  .entrada input { padding: 12px 14px; }
+  #senha { padding-right: 46px; }
+
+  .olho {
+    position: absolute; right: 5px;
+    display: grid; place-items: center;
+    width: 36px; height: 36px;
+    background: none; border: none; border-radius: 8px;
+    cursor: pointer; color: var(--texto-fraco);
+  }
+
+  .olho:hover { color: var(--texto); background: var(--fundo-alt); }
+  .olho svg { width: 18px; height: 18px; }
+
+  .entrar {
+    width: 100%;
+    margin-top: 8px;
+    padding: 12px;
+    display: flex; align-items: center; justify-content: center; gap: 9px;
+  }
+
+  .giro {
+    width: 15px; height: 15px;
+    border: 2px solid rgba(255, 255, 255, .35);
+    border-top-color: var(--latao-contraste);
+    border-radius: 50%;
+    animation: girar .6s linear infinite;
+  }
+
+  @keyframes girar { to { transform: rotate(360deg); } }
+
+  .erro-caixa {
+    display: flex; align-items: center; gap: 9px;
+    background: var(--erro-fundo);
+    border: 1px solid var(--erro);
+    color: var(--erro);
+    padding: 11px 13px;
+    border-radius: var(--raio-p);
+    font-size: 14px;
+    margin-bottom: 20px;
+  }
+
+  .erro-caixa svg { width: 17px; height: 17px; flex: none; }
+
+  .separa {
+    display: flex; align-items: center; gap: 13px;
+    margin: 26px 0 18px;
+    color: var(--texto-fraco);
+    font-size: 12.5px;
+  }
+
+  .separa::before, .separa::after { content: ""; flex: 1; height: 1px; background: var(--linha); }
+
+  .cliente {
+    display: block; text-align: center;
+    padding: 12px;
+    border: 1px solid var(--linha-forte);
+    border-radius: var(--raio-p);
+    color: var(--texto-suave);
+    text-decoration: none;
+    font-size: 14.5px;
+    transition: border-color .15s, color .15s, background .15s;
+  }
+
+  .cliente:hover { border-color: var(--latao); color: var(--texto); background: var(--latao-fraco); }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .caixa { animation: subir .4s ease both; }
+    @keyframes subir { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  }
+
+  @media (max-width: 860px) {
+    body { grid-template-columns: 1fr; }
+    .marca { padding: 26px 22px; gap: 0; }
+    .chamada, .pontos, .rodape { display: none; }
+    .painel { padding: 32px 22px 48px; align-items: start; }
+  }
+</style>
+</head>
+<body>
+
+<section class="marca">
+  <div class="logo">
+    <span class="logo-mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/>
+        <path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12"/>
+      </svg>
+    </span>
+    <span class="logo-nome" id="marcaNome">Barbearia</span>
+  </div>
+
+  <div class="chamada">
+    <h1>A agenda da sua barbearia,<br><em>sem furo e sem papel.</em></h1>
+    <p>Seus clientes marcam pelo WhatsApp ou pelo link. Voce so olha a agenda.</p>
+
+    <ul class="pontos">
+      <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Dois clientes nunca pegam o mesmo horario</li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Atendimento automatico no WhatsApp</li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Folga e feriado somem da agenda sozinhos</li>
+    </ul>
+  </div>
+
+  <p class="rodape">Feito para barbearia pequena que odeia caderninho.</p>
+</section>
+
+<main class="painel">
+  <div class="canto" id="canto"></div>
+
+  <div class="caixa">
+    <h2>Bem-vindo de volta</h2>
+    <p class="sub">Entre para ver a agenda de hoje.</p>
+
+    <div id="msg" class="erro-caixa oculto" role="alert">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16v.01"/>
+      </svg>
+      <span id="msgTexto"></span>
+    </div>
+
+    <form id="form" novalidate>
+      <div class="campo">
+        <label for="email">E-mail</label>
+        <div class="entrada">
+          <input id="email" type="email" autocomplete="username" placeholder="voce@barbearia.com" required autofocus>
+        </div>
+      </div>
+
+      <div class="campo">
+        <label for="senha">Senha</label>
+        <div class="entrada">
+          <input id="senha" type="password" autocomplete="current-password" placeholder="Sua senha" required>
+          <button type="button" class="olho" id="verSenha" aria-label="Mostrar senha">
+            <svg id="iconeOlho" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <button class="btn entrar" id="botao" type="submit">
+        <span class="giro oculto" id="giro"></span>
+        <span id="rotulo">Entrar</span>
+      </button>
+    </form>
+
+    <div class="separa">ou</div>
+    <a class="cliente" href="agendar.html">Sou cliente, quero agendar um horario</a>
+  </div>
+</main>
+
+<script src="app.js?v=202608091806"></script>
+<script>
+if (Auth.token) location.replace('painel.html');
+
+document.getElementById('canto').innerHTML = botaoTema();
+
+const msg = document.getElementById('msg');
+const msgTexto = document.getElementById('msgTexto');
+const botao = document.getElementById('botao');
+const giro = document.getElementById('giro');
+const rotulo = document.getElementById('rotulo');
+const senha = document.getElementById('senha');
+
+api('/api/config').then(c => {
+  if (!c.nome) return;
+  document.getElementById('marcaNome').textContent = c.nome;
+  document.title = c.nome;
+}).catch(() => {});
+
+document.getElementById('verSenha').onclick = (e) => {
+  const mostrando = senha.type === 'text';
+  senha.type = mostrando ? 'password' : 'text';
+  e.currentTarget.setAttribute('aria-label', mostrando ? 'Mostrar senha' : 'Ocultar senha');
+  document.getElementById('iconeOlho').style.opacity = mostrando ? '1' : '.55';
+  senha.focus();
+};
+
+function mostrarErro(texto) {
+  if (!texto) { msg.classList.add('oculto'); return; }
+  msgTexto.textContent = texto;
+  msg.classList.remove('oculto');
+}
+
+function carregando(ligado) {
+  botao.disabled = ligado;
+  giro.classList.toggle('oculto', !ligado);
+  rotulo.textContent = ligado ? 'Entrando...' : 'Entrar';
+}
+
+document.getElementById('form').onsubmit = async (e) => {
+  e.preventDefault();
+  mostrarErro('');
+
+  const email = document.getElementById('email').value.trim();
+  if (!email || !senha.value) { mostrarErro('Preencha e-mail e senha.'); return; }
+
+  carregando(true);
+
+  try {
+    Auth.entrar(await api('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, senha: senha.value })
+    }));
+
+    location.href = 'painel.html';
+  } catch (erro) {
+    mostrarErro(erro.message);
+    carregando(false);
+    senha.select();
+  }
+};
+</script>
+</body>
+</html>

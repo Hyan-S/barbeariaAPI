@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agendar horario</title>
+<script>document.documentElement.dataset.tema =
+  localStorage.getItem('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro');</script>
+<link rel="stylesheet" href="app.css?v=202608091806">
+<style>
+  main { max-width: 580px; }
+  .trilha { display: flex; align-items: center; gap: 6px; margin-bottom: 22px; }
+  .trilha .no { display: flex; align-items: center; gap: 7px; flex: none; }
+
+  .trilha .bola {
+    width: 26px; height: 26px;
+    display: grid; place-items: center;
+    border-radius: 50%;
+    background: var(--fundo-alt);
+    border: 1px solid var(--linha-forte);
+    color: var(--texto-fraco);
+    font-size: 12.5px;
+    font-weight: 650;
+  }
+
+  .trilha .rotulo { font-size: 13px; color: var(--texto-fraco); }
+  .trilha .traco { flex: 1; height: 1px; background: var(--linha-forte); }
+
+  .trilha .no.ativo .bola,
+  .trilha .no.feito .bola {
+    background: linear-gradient(160deg, var(--latao-claro), var(--latao-escuro));
+    border-color: transparent;
+    color: var(--latao-contraste);
+  }
+
+  .trilha .no.ativo .rotulo,
+  .trilha .no.feito .rotulo { color: var(--texto); font-weight: 550; }
+
+  @media (max-width: 520px) { .trilha .rotulo { display: none; } }
+  /* Fita horizontal: mais rapido que abrir o seletor de data no celular. */
+  .dias { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; }
+
+  .dias button {
+    flex: none;
+    width: 62px;
+    padding: 9px 4px;
+    border: 1px solid var(--linha-forte);
+    background: var(--superficie-2);
+    color: var(--texto);
+    border-radius: var(--raio-p);
+    cursor: pointer;
+    font-family: inherit;
+    text-align: center;
+    transition: border-color .15s, background .15s;
+  }
+
+  .dias button:hover { border-color: var(--latao); }
+
+  .dias button.escolhido {
+    background: linear-gradient(160deg, var(--latao-claro), var(--latao-escuro));
+    color: var(--latao-contraste);
+    border-color: transparent;
+  }
+
+  .dias .ds { display: block; font-size: 11px; text-transform: uppercase; opacity: .7; }
+  .dias .dn { display: block; font-size: 17px; font-weight: 650; line-height: 1.3; }
+  .dias .dm { display: block; font-size: 11px; opacity: .7; }
+  .horarios button.ocupado {
+    background: var(--fundo-alt);
+    color: var(--texto-fraco);
+    border-style: dashed;
+    cursor: not-allowed;
+    text-decoration: line-through;
+  }
+
+  .horarios button.ocupado:hover { border-color: var(--linha-forte); background: var(--fundo-alt); }
+
+  .legenda { display: flex; gap: 16px; margin-top: 12px; font-size: 12.5px; color: var(--texto-suave); }
+  .legenda span { display: flex; align-items: center; gap: 6px; }
+  .amostra { width: 13px; height: 13px; border-radius: 4px; border: 1px solid var(--linha-forte); }
+  .amostra.livre { background: var(--superficie-2); }
+  .amostra.cheio { background: var(--fundo-alt); border-style: dashed; }
+
+  .resumo {
+    display: grid;
+    gap: 9px;
+    background: var(--fundo-alt);
+    border: 1px solid var(--linha);
+    border-radius: var(--raio);
+    padding: 15px 17px;
+    margin-bottom: 18px;
+    font-size: 14.5px;
+  }
+
+  .resumo div { display: flex; justify-content: space-between; gap: 12px; }
+  .resumo .rot { color: var(--texto-suave); }
+  .resumo .val { font-weight: 600; text-align: right; }
+
+  .sucesso { text-align: center; padding: 12px 0 4px; }
+
+  .selo {
+    width: 62px; height: 62px;
+    margin: 0 auto 16px;
+    display: grid; place-items: center;
+    border-radius: 50%;
+    background: var(--ok-fundo);
+    color: var(--ok);
+  }
+
+  .selo svg { width: 32px; height: 32px; }
+</style>
+</head>
+<body>
+<header class="topo" id="topo"></header>
+
+<main>
+  <div id="msg" class="oculto"></div>
+
+  <!-- Confirmacao -->
+  <div id="pronto" class="card oculto">
+    <div class="sucesso">
+      <div class="selo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 6L9 17l-5-5"/>
+        </svg>
+      </div>
+      <h2 style="font-size:21px;margin:0 0 6px">Horario confirmado</h2>
+      <p class="ajuda" style="margin-bottom:20px">Te esperamos!</p>
+    </div>
+
+    <div class="resumo" id="resumoFinal"></div>
+    <button class="btn neutro" style="width:100%" onclick="location.reload()">Fazer outro agendamento</button>
+  </div>
+
+  <div id="fluxo">
+    <div class="card oculto" id="cardMeus">
+      <h2>Seus horarios</h2>
+      <div id="meus"></div>
+    </div>
+
+    <div class="card">
+      <div class="trilha" id="trilha"></div>
+
+      <div class="passo">
+        <h3>Servico</h3>
+        <div class="opcoes" id="servicos"></div>
+      </div>
+
+      <div class="passo oculto" id="passoProfissional">
+        <h3>Profissional</h3>
+        <div class="opcoes" id="profissionais"></div>
+      </div>
+
+      <div class="passo oculto" id="passoData">
+        <h3>Dia</h3>
+        <div class="dias" id="dias"></div>
+      </div>
+
+      <div class="passo oculto" id="passoHora">
+        <h3>Horario</h3>
+        <div class="horarios" id="horarios"></div>
+        <div class="legenda">
+          <span><i class="amostra livre"></i> livre</span>
+          <span><i class="amostra cheio"></i> ocupado</span>
+        </div>
+        <div id="semHorario" class="vazio oculto">A barbearia nao atende neste dia.</div>
+      </div>
+
+      <div class="passo oculto" id="passoDados">
+        <h3>Seus dados</h3>
+        <div class="resumo" id="resumoParcial"></div>
+        <div class="campo">
+          <label for="nome">Nome</label>
+          <input id="nome" placeholder="Como podemos te chamar">
+        </div>
+        <div class="campo">
+          <label for="telefone">WhatsApp com DDD</label>
+          <input id="telefone" inputmode="numeric" placeholder="11987654321">
+        </div>
+      </div>
+
+      <button class="btn oculto" style="width:100%" id="confirmar">Confirmar agendamento</button>
+    </div>
+  </div>
+</main>
+
+<script src="app.js?v=202608091806"></script>
+<script>
+const msg = document.getElementById('msg');
+const token = new URLSearchParams(location.search).get('t');
+
+let servicos = [];
+let servicoEscolhido = null;
+let diaEscolhido = null;
+let slotEscolhido = null;
+
+// null = cliente aceita qualquer profissional livre. Nesse caso o barbeiro so e
+// definido no servidor, na hora de gravar.
+let profissionalEscolhido = null;
+
+const PASSOS = ['Servico', 'Profissional', 'Dia', 'Horario', 'Dados'];
+
+iniciar();
+
+/**
+ * O botao e sempre "Sair", mas faz coisas diferentes:
+ * - veio pelo link do WhatsApp -> descarta a sessao e volta para a tela limpa;
+ * - e alguem da barbearia logado -> logout de verdade;
+ * - visitante comum -> so sai da tela de agendamento.
+ */
+function montarCabecalho() {
+  let acoes = '';
+
+  if (token) {
+    acoes = `<span class="quem" id="quemCliente"></span>
+      <button class="btn pequeno neutro" onclick="sairDoLink()">Sair</button>`;
+  } else if (Auth.token) {
+    acoes = `<span class="quem">${Auth.nome || ''}</span>
+      <a class="btn pequeno neutro" href="painel.html" style="text-decoration:none">Painel</a>
+      <button class="btn pequeno neutro" onclick="Auth.sair()">Sair</button>`;
+  } else {
+    acoes = `<button class="btn pequeno neutro" onclick="location.href='index.html'">Sair</button>`;
+  }
+
+  document.getElementById('topo').innerHTML =
+    `<div class="marca-topo"><span class="marca-mark">${MARCA_SVG}</span>
+       <h1 id="titulo">Agendar horario</h1></div>
+     <span class="espaco"></span>${acoes}${botaoTema()}`;
+}
+
+// Tira o token da URL para o proximo que abrir o navegador nao ver os
+// agendamentos de quem estava antes.
+function sairDoLink() {
+  location.replace(location.pathname);
+}
+
+async function iniciar() {
+  montarCabecalho();
+
+  api('/api/config').then(c => {
+    if (c.nome) { document.getElementById('titulo').textContent = c.nome; document.title = c.nome; }
+  }).catch(() => {});
+
+  desenharTrilha(0);
+  montarDias();
+
+  document.getElementById('confirmar').onclick = confirmar;
+
+  if (token) await carregarSessao();
+
+  servicos = await api('/api/servicos');
+
+  document.getElementById('servicos').innerHTML = servicos.map(s => `
+    <button data-id="${s.id}">
+      <span><strong>${s.nome}</strong><br><span class="preco">${s.duracaoMinutos} min</span></span>
+      <span class="preco">${moeda(s.precoCentavos)}</span>
+    </button>`).join('');
+
+  document.querySelectorAll('#servicos button').forEach(b => {
+    b.onclick = () => {
+      document.querySelectorAll('#servicos button').forEach(x => x.classList.remove('escolhido'));
+      b.classList.add('escolhido');
+      servicoEscolhido = servicos.find(s => s.id === b.dataset.id);
+      carregarProfissionais();
+    };
+  });
+}
+
+// Cada servico tem sua propria equipe: trocar de servico refaz a lista.
+async function carregarProfissionais() {
+  profissionalEscolhido = null;
+  slotEscolhido = null;
+  ['passoData', 'passoHora', 'passoDados'].forEach(id =>
+    document.getElementById(id).classList.add('oculto'));
+  document.getElementById('confirmar').classList.add('oculto');
+
+  const equipe = await api(`/api/servicos/${servicoEscolhido.id}/barbeiros`);
+  const box = document.getElementById('profissionais');
+
+  if (equipe.length === 0) {
+    box.innerHTML = '<p class="ajuda">Nenhum profissional disponivel para este servico.</p>';
+    document.getElementById('passoProfissional').classList.remove('oculto');
+    desenharTrilha(1);
+    return;
+  }
+
+  // Com um profissional so, "qualquer um" seria a mesma coisa — mostramos quem e.
+  const opcoes = equipe.length === 1 ? equipe : [{ id: '', nome: 'Qualquer um disponivel' }, ...equipe];
+
+  box.innerHTML = opcoes.map(p => `
+    <button data-id="${p.id}">
+      <span><strong>${p.nome}</strong>${p.id === ''
+        ? '<br><span class="preco">Mostra todos os horarios livres</span>' : ''}</span>
+    </button>`).join('');
+
+  box.querySelectorAll('button').forEach(b => {
+    b.onclick = () => {
+      box.querySelectorAll('button').forEach(x => x.classList.remove('escolhido'));
+      b.classList.add('escolhido');
+      profissionalEscolhido = b.dataset.id
+        ? { id: b.dataset.id, nome: b.querySelector('strong').textContent }
+        : null;
+
+      document.getElementById('passoData').classList.remove('oculto');
+      desenharTrilha(2);
+      carregarHorarios();
+    };
+  });
+
+  document.getElementById('passoProfissional').classList.remove('oculto');
+  desenharTrilha(1);
+
+  if (equipe.length === 1) box.querySelector('button').click();
+}
+
+function desenharTrilha(atual) {
+  document.getElementById('trilha').innerHTML = PASSOS.map((p, i) => {
+    const estado = i < atual ? 'feito' : i === atual ? 'ativo' : '';
+    const no = `<span class="no ${estado}"><span class="bola">${i < atual ? '&#10003;' : i + 1}</span>
+      <span class="rotulo">${p}</span></span>`;
+    return i < PASSOS.length - 1 ? no + '<span class="traco"></span>' : no;
+  }).join('');
+}
+function montarDias() {
+  const hoje = new Date();
+  const nomes = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
+  const meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  let html = '';
+
+  for (let i = 0; i < 14; i++) {
+    const d = new Date(hoje);
+    d.setDate(d.getDate() + i);
+    const iso = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+
+    html += `<button data-dia="${iso}" class="${i === 0 ? 'escolhido' : ''}">
+      <span class="ds">${i === 0 ? 'hoje' : nomes[d.getDay()]}</span>
+      <span class="dn">${String(d.getDate()).padStart(2, '0')}</span>
+      <span class="dm">${meses[d.getMonth()]}</span>
+    </button>`;
+  }
+
+  const container = document.getElementById('dias');
+  container.innerHTML = html;
+  diaEscolhido = container.querySelector('button').dataset.dia;
+
+  container.querySelectorAll('button').forEach(b => {
+    b.onclick = () => {
+      container.querySelectorAll('button').forEach(x => x.classList.remove('escolhido'));
+      b.classList.add('escolhido');
+      diaEscolhido = b.dataset.dia;
+      desenharTrilha(3);
+      carregarHorarios();
+    };
+  });
+}
+
+async function carregarSessao() {
+  try {
+    const sessao = await api('/api/sessao?t=' + encodeURIComponent(token));
+
+    document.getElementById('nome').value = sessao.nome || '';
+    document.getElementById('telefone').value = sessao.telefone || '';
+
+    const quem = document.getElementById('quemCliente');
+    if (quem) quem.textContent = sessao.nome || sessao.telefone || '';
+
+    if (sessao.agendamentos.length) {
+      document.getElementById('cardMeus').classList.remove('oculto');
+      document.getElementById('meus').innerHTML = sessao.agendamentos.map(a => `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--linha)">
+          <span><strong>${dataLegivel(a.inicio)}</strong><br><span class="preco">${a.servico} com ${a.barbeiro}</span></span>
+          <button class="btn pequeno perigo" data-id="${a.id}">Cancelar</button>
+        </div>`).join('');
+
+      document.querySelectorAll('#meus button').forEach(b => {
+        b.onclick = async () => {
+          if (!confirm('Cancelar este horario?')) return;
+          try {
+            await api(`/api/agendamentos/${b.dataset.id}/cancelar?t=${encodeURIComponent(token)}`, { method: 'POST' });
+            location.reload();
+          } catch (e) { aviso(msg, e.message); }
+        };
+      });
+    }
+  } catch {
+    aviso(msg, 'Seu link expirou. Voce ainda pode agendar informando o telefone.', 'info');
+  }
+}
+
+async function carregarHorarios() {
+  if (!servicoEscolhido || !diaEscolhido) return;
+
+  slotEscolhido = null;
+  document.getElementById('passoDados').classList.add('oculto');
+  document.getElementById('confirmar').classList.add('oculto');
+  // grade=true traz o dia inteiro, inclusive o que ja foi ocupado.
+  const slots = await api(
+    `/api/disponibilidade?data=${diaEscolhido}&servicoId=${servicoEscolhido.id}&grade=true`
+    + (profissionalEscolhido ? `&barbeiroId=${profissionalEscolhido.id}` : ''));
+
+  document.getElementById('passoHora').classList.remove('oculto');
+  document.getElementById('semHorario').classList.toggle('oculto', slots.length > 0);
+  // Mesmo horario com barbeiros diferentes vira um botao so.
+  const porHora = {};
+  slots.forEach(s => {
+    const atual = porHora[s.hora];
+    if (!atual || (!atual.livre && s.livre)) porHora[s.hora] = s;
+  });
+
+  const container = document.getElementById('horarios');
+  container.innerHTML = Object.values(porHora).map(s => s.livre
+    ? `<button data-inicio="${s.inicioUtc}" data-barbeiro="${s.barbeiroId}">${s.hora}</button>`
+    : `<button class="ocupado" disabled title="Ja reservado">${s.hora}</button>`
+  ).join('');
+
+  container.querySelectorAll('button:not(.ocupado)').forEach(b => {
+    b.onclick = () => {
+      container.querySelectorAll('button').forEach(x => x.classList.remove('escolhido'));
+      b.classList.add('escolhido');
+      slotEscolhido = { inicioUtc: b.dataset.inicio, barbeiroId: b.dataset.barbeiro, hora: b.textContent };
+
+      document.getElementById('resumoParcial').innerHTML = resumoHtml();
+      document.getElementById('passoDados').classList.remove('oculto');
+      document.getElementById('confirmar').classList.remove('oculto');
+      desenharTrilha(4);
+      document.getElementById('passoDados').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
+  });
+}
+
+function resumoHtml(inicioIso, barbeiroConfirmado) {
+  const quando = inicioIso
+    ? dataLegivel(inicioIso)
+    : `${new Date(diaEscolhido + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' })} as ${slotEscolhido.hora}`;
+
+  // Antes de confirmar, "qualquer um" ainda nao tem dono definido.
+  const profissional = barbeiroConfirmado
+    || profissionalEscolhido?.nome
+    || 'Qualquer um disponivel';
+
+  return `
+    <div><span class="rot">Servico</span><span class="val">${servicoEscolhido.nome}</span></div>
+    <div><span class="rot">Profissional</span><span class="val">${profissional}</span></div>
+    <div><span class="rot">Quando</span><span class="val">${quando}</span></div>
+    <div><span class="rot">Duracao</span><span class="val">${servicoEscolhido.duracaoMinutos} min</span></div>
+    <div><span class="rot">Valor</span><span class="val">${moeda(servicoEscolhido.precoCentavos)}</span></div>`;
+}
+
+async function confirmar() {
+  aviso(msg, '');
+  const botao = document.getElementById('confirmar');
+  botao.disabled = true;
+
+  try {
+    const resultado = await api('/api/agendamentos', {
+      method: 'POST',
+      body: JSON.stringify({
+        token: token,
+        nome: document.getElementById('nome').value,
+        telefone: document.getElementById('telefone').value,
+        servicoId: servicoEscolhido.id,
+        inicioUtc: slotEscolhido.inicioUtc,
+        // Null deixa o servidor escolher quem esta livre na hora de gravar: se dois
+        // clientes pedirem o mesmo horario, cada um cai com um profissional.
+        barbeiroId: profissionalEscolhido?.id || null
+      })
+    });
+
+    document.getElementById('resumoFinal').innerHTML =
+      resumoHtml(resultado.inicio, resultado.barbeiro);
+    document.getElementById('fluxo').classList.add('oculto');
+    document.getElementById('pronto').classList.remove('oculto');
+    window.scrollTo(0, 0);
+  } catch (e) {
+    botao.disabled = false;
+    // Alguem pegou o horario primeiro: recarrega para ele aparecer como ocupado.
+    if (e.status === 409) {
+      aviso(msg, e.message + '. Escolha outro horario abaixo.', 'info');
+      carregarHorarios();
+    } else {
+      aviso(msg, e.message);
+    }
+  }
+}
+</script>
+</body>
+</html>

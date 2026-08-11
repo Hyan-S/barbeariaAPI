@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Barbearia.Api/Barbearia.Api.csproj" />
+    <Project Path="src/Barbearia.Application/Barbearia.Application.csproj" />
+    <Project Path="src/Barbearia.Domain/Barbearia.Domain.csproj" />
+    <Project Path="src/Barbearia.Infrastructure/Barbearia.Infrastructure.csproj" />
+  </Folder>
+</Solution>

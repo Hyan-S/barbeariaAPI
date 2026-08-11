@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trocar senha</title>
+<script>document.documentElement.dataset.tema =
+  localStorage.getItem('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro');</script>
+<link rel="stylesheet" href="app.css?v=202608091806">
+</head>
+<body>
+<main class="centro">
+  <div class="card">
+    <h2>Crie sua senha</h2>
+    <p class="ajuda" id="explica">
+      A senha que voce recebeu e provisoria. Escolha uma sua para continuar.
+    </p>
+
+    <div id="msg" class="oculto"></div>
+
+    <form id="form">
+      <div class="campo">
+        <label for="atual">Senha provisoria</label>
+        <input id="atual" type="password" autocomplete="current-password" required>
+      </div>
+      <div class="campo">
+        <label for="nova">Nova senha</label>
+        <input id="nova" type="password" autocomplete="new-password" required>
+        <p class="ajuda">Minimo de 8 caracteres.</p>
+      </div>
+      <div class="campo">
+        <label for="repete">Repita a nova senha</label>
+        <input id="repete" type="password" autocomplete="new-password" required>
+      </div>
+      <button class="btn" style="width:100%" id="botao">Salvar e entrar</button>
+    </form>
+
+    <p class="ajuda" style="text-align:center;margin-top:18px">
+      <a href="#" onclick="Auth.sair();return false">Sair</a>
+    </p>
+  </div>
+</main>
+
+<script src="app.js?v=202608091806"></script>
+<script>
+if (!Auth.token) location.replace('index.html');
+
+const msg = document.getElementById('msg');
+const botao = document.getElementById('botao');
+
+// Quem entra por vontade propria, e nao forcado, ve outro texto.
+if (!Auth.precisaTrocarSenha) {
+  document.querySelector('h2').textContent = 'Trocar senha';
+  document.getElementById('explica').textContent = 'Informe a senha atual e escolha uma nova.';
+  document.querySelector('label[for="atual"]').textContent = 'Senha atual';
+}
+
+document.getElementById('form').onsubmit = async (e) => {
+  e.preventDefault();
+  aviso(msg, '');
+
+  const nova = document.getElementById('nova').value;
+
+  if (nova.length < 8) { aviso(msg, 'A nova senha precisa de no minimo 8 caracteres.'); return; }
+  if (nova !== document.getElementById('repete').value) {
+    aviso(msg, 'As duas senhas nao conferem.');
+    return;
+  }
+
+  botao.disabled = true;
+
+  try {
+    Auth.entrar(await api('/api/auth/trocar-senha', {
+      method: 'POST',
+      body: JSON.stringify({ senhaAtual: document.getElementById('atual').value, novaSenha: nova })
+    }));
+
+    location.href = 'painel.html';
+  } catch (erro) {
+    aviso(msg, erro.message);
+    botao.disabled = false;
+  }
+};
+</script>
+</body>
+</html>

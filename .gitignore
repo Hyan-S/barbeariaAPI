@@ -1,0 +1,13 @@
+bin/
+obj/
+.vs/
+*.user
+appsettings.Local.json
+appsettings.*.Local.json
+
+# Segredos e material sensivel nunca versionados nem servidos
+.env
+*.env
+_conversas/
+**/wwwroot/*.txt
+secrets.json

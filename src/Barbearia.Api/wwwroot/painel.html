@@ -1,0 +1,2124 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel</title>
+<script>document.documentElement.dataset.tema =
+  localStorage.getItem('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro');</script>
+<link rel="stylesheet" href="app.css?v=202608091806">
+</head>
+<body>
+<header class="topo" id="topo"></header>
+
+<div class="app">
+<aside class="lateral" id="menu"></aside>
+
+<main class="conteudo">
+  <div id="msg" class="oculto"></div>
+
+  <!-- NOVO AGENDAMENTO -->
+  <section id="secao-novo" class="oculto">
+    <div class="card">
+      <h2>Novo agendamento</h2>
+      <p class="ajuda">
+        Para atendimento marcado no balcao ou por telefone. Encaixe fora da
+        antecedencia minima e permitido aqui.
+      </p>
+
+      <div class="passo">
+        <h3>1. Cliente</h3>
+        <div class="linha">
+          <div class="campo">
+            <label for="agBusca">Buscar cliente ja cadastrado</label>
+            <input id="agBusca" placeholder="Nome ou telefone">
+          </div>
+          <div class="campo" style="display:flex;align-items:flex-end">
+            <button class="btn neutro" id="agBuscar">Buscar</button>
+          </div>
+        </div>
+        <div id="agResultado" class="opcoes" style="margin-bottom:12px"></div>
+
+        <div class="linha">
+          <div class="campo">
+            <label for="agNome">Ou cadastre na hora — nome</label>
+            <input id="agNome" placeholder="Nome do cliente">
+          </div>
+          <div class="campo">
+            <label for="agTelefone">Telefone com DDD</label>
+            <input id="agTelefone" inputmode="numeric" placeholder="11987654321">
+          </div>
+        </div>
+      </div>
+
+      <div class="passo">
+        <h3>2. Servico e barbeiro</h3>
+        <div class="linha">
+          <div class="campo">
+            <label for="agServico">Servico</label>
+            <select id="agServico"></select>
+          </div>
+          <div class="campo">
+            <label for="agBarbeiro">Barbeiro</label>
+            <select id="agBarbeiro"></select>
+          </div>
+        </div>
+      </div>
+
+      <div class="passo">
+        <h3>3. Dia e horario</h3>
+        <div class="campo">
+          <label for="agData">Dia</label>
+          <input type="date" id="agData">
+        </div>
+        <div class="horarios" id="agHorarios"></div>
+        <div id="agSemHorario" class="vazio oculto">Sem expediente neste dia.</div>
+      </div>
+
+      <div class="campo">
+        <label for="agObs">Observacao</label>
+        <input id="agObs" placeholder="Opcional">
+      </div>
+
+      <button class="btn" id="agConfirmar" disabled>Confirmar agendamento</button>
+    </div>
+  </section>
+
+  <!-- DASHBOARD -->
+  <section id="secao-dashboard" class="oculto">
+    <div class="card">
+      <h2>Dashboard</h2>
+      <p class="ajuda">Considera atendimentos nao cancelados. Valores usam o preco
+        congelado no momento do agendamento.</p>
+
+      <div class="periodos" id="dPeriodos"></div>
+      <div class="linha" style="margin-bottom:4px">
+        <div class="campo" style="margin:0">
+          <label for="dDe">De</label>
+          <input type="date" id="dDe">
+        </div>
+        <div class="campo" style="margin:0">
+          <label for="dAte">Ate</label>
+          <input type="date" id="dAte">
+        </div>
+        <div class="campo" style="margin:0;display:flex;align-items:flex-end">
+          <button class="btn" id="dAplicar">Atualizar</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tiles" id="dTiles"></div>
+
+    <div class="card">
+      <p class="grafico-titulo" id="dSerieTitulo">Receita por dia</p>
+      <div class="gtempo" id="dSerie"></div>
+    </div>
+
+    <div class="duas">
+      <div class="card">
+        <p class="grafico-titulo">Receita por profissional</p>
+        <div class="barras" id="dBarbeiros"></div>
+        <div class="rolagem" style="margin-top:16px"><table>
+          <thead><tr><th>Profissional</th><th>Atend.</th><th>Ticket</th><th>Ocupacao</th></tr></thead>
+          <tbody id="dBarbeirosTab"></tbody>
+        </table></div>
+        <p class="ajuda" style="margin-top:10px">Ocupacao = tempo atendido sobre o
+          expediente cadastrado. Bloqueios nao entram na conta.</p>
+      </div>
+
+      <div class="card">
+        <p class="grafico-titulo">Servicos mais consumidos</p>
+        <div class="barras" id="dServicos"></div>
+        <div class="rolagem" style="margin-top:16px"><table>
+          <thead><tr><th>Servico</th><th>Qtd</th><th>Receita</th><th>Part.</th></tr></thead>
+          <tbody id="dServicosTab"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="duas">
+      <div class="card">
+        <p class="grafico-titulo">Movimento por dia da semana</p>
+        <div class="barras" id="dDiaSemana"></div>
+      </div>
+      <div class="card">
+        <p class="grafico-titulo">Horario de pico</p>
+        <div class="colunas" id="dHoras"></div>
+        <div id="dHorasVazio" class="vazio oculto">Sem atendimentos no periodo.</div>
+      </div>
+    </div>
+
+    <div class="duas">
+      <div class="card">
+        <p class="grafico-titulo">Clientes que mais gastaram</p>
+        <div class="rolagem"><table>
+          <thead><tr><th>Cliente</th><th>Visitas</th><th>Total</th></tr></thead>
+          <tbody id="dClientes"></tbody>
+        </table></div>
+      </div>
+      <div class="card">
+        <p class="grafico-titulo">Por onde agendaram</p>
+        <div class="barras" id="dOrigem"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="grafico-titulo">Janelas fixas (terminando hoje)</p>
+      <div class="rolagem"><table>
+        <thead><tr><th>Periodo</th><th>Atendimentos</th><th>Receita</th><th>Media/dia</th></tr></thead>
+        <tbody id="dJanelas"></tbody>
+      </table></div>
+    </div>
+
+    <div class="card">
+      <p class="grafico-titulo">Produtos <span id="dProdTag" class="tag"></span></p>
+      <div id="dProdAviso" class="aviso info"></div>
+      <div class="rolagem"><table>
+        <thead><tr><th>Produto</th><th>Estoque</th><th>Preco</th><th>Valor parado</th></tr></thead>
+        <tbody id="dProdutos"></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <!-- PERMISSOES -->
+  <section id="secao-permissoes" class="oculto">
+    <div class="card">
+      <h2>Permissoes</h2>
+      <p class="ajuda">
+        Marque o que cada funcionario pode acessar. Admin tem tudo por definicao e nao
+        aparece editavel. Gestor ja recebe servicos, produtos e clientes automaticamente;
+        o dashboard e a unica coisa que ele so ve se voce liberar.
+      </p>
+      <div id="permAviso" class="aviso info">
+        A mudanca vale no proximo login da pessoa, porque o acesso viaja no token da sessao.
+      </div>
+      <div class="rolagem"><table>
+        <thead><tr id="permCabecalho"></tr></thead>
+        <tbody id="permCorpo"></tbody>
+      </table></div>
+    </div>
+
+    <div class="card">
+      <h2>O que cada permissao libera</h2>
+      <div class="rolagem"><table><tbody id="permLegenda"></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- PESSOAS -->
+  <section id="secao-pessoas" class="oculto">
+    <div class="card">
+      <h2>Pessoas no sistema</h2>
+      <p class="ajuda">Funcionarios e clientes numa lista so. Quem e os dois aparece marcado.</p>
+
+      <div class="linha" style="margin-bottom:16px">
+        <div class="campo" style="margin:0">
+          <label for="buscaPessoa">Buscar</label>
+          <input id="buscaPessoa" placeholder="Nome, e-mail ou telefone">
+        </div>
+        <div class="campo" style="margin:0;display:flex;align-items:flex-end">
+          <button class="btn neutro" id="btnBuscarPessoa">Buscar</button>
+        </div>
+      </div>
+
+      <h2 style="font-size:14px;margin-top:8px">Funcionarios</h2>
+      <div class="rolagem"><table>
+        <thead><tr><th>Nome</th><th>E-mail</th><th>Telefone</th><th>Perfil</th><th>Status</th></tr></thead>
+        <tbody id="listaPessoasFunc"></tbody>
+      </table></div>
+
+      <h2 style="font-size:14px;margin-top:22px">Clientes</h2>
+      <div class="rolagem"><table>
+        <thead><tr><th>Nome</th><th>Telefone</th><th>Agendamentos</th><th>Situacao</th><th></th></tr></thead>
+        <tbody id="listaPessoasCli"></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <!-- AGENDA -->
+  <section id="secao-agenda">
+    <div class="card">
+      <h2>Agenda</h2>
+
+      <div class="periodos" id="periodos"></div>
+
+      <div class="linha" style="margin-bottom:12px">
+        <div class="campo" style="margin:0">
+          <label for="fDe">De</label>
+          <input type="date" id="fDe">
+        </div>
+        <div class="campo" style="margin:0">
+          <label for="fAte">Ate</label>
+          <input type="date" id="fAte">
+        </div>
+        <div class="campo" style="margin:0;display:flex;align-items:flex-end;gap:8px">
+          <button class="btn neutro pequeno" id="ontem">&lt;</button>
+          <button class="btn neutro pequeno" id="amanha">&gt;</button>
+        </div>
+      </div>
+
+      <div class="linha" style="margin-bottom:12px">
+        <div class="campo" style="margin:0">
+          <label for="fBusca">Cliente (nome ou telefone)</label>
+          <input id="fBusca" placeholder="Hyan ou 11987654321">
+        </div>
+        <div class="campo" style="margin:0">
+          <label for="fBarbeiro">Barbeiro</label>
+          <select id="fBarbeiro"><option value="">Todos</option></select>
+        </div>
+        <div class="campo" style="margin:0">
+          <label for="fServico">Servico</label>
+          <select id="fServico"><option value="">Todos</option></select>
+        </div>
+      </div>
+
+      <div class="linha" style="margin-bottom:14px">
+        <div class="campo" style="margin:0">
+          <label for="fStatus">Situacao</label>
+          <select id="fStatus">
+            <option value="">Todas</option>
+            <option value="Confirmado">Confirmado</option>
+            <option value="Concluido">Concluido</option>
+            <option value="Cancelado">Cancelado</option>
+          </select>
+        </div>
+        <div class="campo" style="margin:0">
+          <label for="fOrigem">Origem</label>
+          <select id="fOrigem">
+            <option value="">Todas</option>
+            <option value="Web">Site</option>
+            <option value="WhatsApp">WhatsApp</option>
+            <option value="Painel">Painel</option>
+          </select>
+        </div>
+        <div class="campo" style="margin:0">
+          <label for="fHoraDe">Das (hora)</label>
+          <input type="number" id="fHoraDe" min="0" max="23" placeholder="0">
+        </div>
+        <div class="campo" style="margin:0">
+          <label for="fHoraAte">Ate (hora)</label>
+          <input type="number" id="fHoraAte" min="0" max="23" placeholder="23">
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <button class="btn" id="aplicarFiltro">Filtrar</button>
+        <button class="btn neutro" id="limparFiltro">Limpar</button>
+      </div>
+
+      <div id="resumoAgenda" class="resumo-agenda oculto"></div>
+
+      <div class="rolagem"><table>
+        <thead><tr>
+          <th>Quando</th><th>Cliente</th><th>Servico</th><th>Tempo</th>
+          <th>Barbeiro</th><th>Origem</th><th>Situacao</th><th></th>
+        </tr></thead>
+        <tbody id="listaAgenda"></tbody>
+      </table></div>
+      <div id="agendaVazia" class="vazio oculto">Nenhum agendamento com esses filtros.</div>
+      <div id="agendaTruncada" class="aviso info oculto" style="margin-top:14px"></div>
+    </div>
+
+    <!-- Reagendamento -->
+    <div class="card oculto" id="cardReagendar">
+      <h2 id="tituloReagendar">Reagendar</h2>
+      <p class="ajuda" id="subReagendar"></p>
+      <input type="hidden" id="reagendarId">
+
+      <div class="campo">
+        <label for="reData">Novo dia</label>
+        <input type="date" id="reData">
+      </div>
+
+      <div class="horarios" id="reHorarios"></div>
+      <div id="reSemHorario" class="vazio oculto">Sem expediente neste dia.</div>
+
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button class="btn" id="reConfirmar" disabled>Confirmar novo horario</button>
+        <button class="btn neutro" id="reCancelar">Cancelar</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- SERVICOS -->
+  <section id="secao-servicos" class="oculto">
+    <div class="card">
+      <h2 id="tituloServico">Novo servico</h2>
+      <input type="hidden" id="servicoId">
+      <div class="linha">
+        <div class="campo">
+          <label for="sNome">Nome</label>
+          <input id="sNome" placeholder="Corte">
+        </div>
+        <div class="campo">
+          <label for="sDuracao">Duracao (min)</label>
+          <input id="sDuracao" type="number" value="30" min="5" max="480">
+        </div>
+        <div class="campo">
+          <label for="sPreco">Preco (R$)</label>
+          <input id="sPreco" type="number" value="40" min="0" step="0.01">
+        </div>
+      </div>
+      <div class="check" style="margin-bottom:16px">
+        <input type="checkbox" id="sAtivo" checked>
+        <label for="sAtivo">Ativo</label>
+      </div>
+
+      <label>Quem faz este servico</label>
+      <p class="ajuda" style="margin-top:0">
+        Nenhum marcado = todos fazem. Marcando, so os escolhidos aparecem para o
+        cliente e so a agenda deles entra no calculo de horarios.
+      </p>
+      <div class="linha" id="sBarbeiros" style="margin-bottom:16px"></div>
+
+      <button class="btn" id="salvarServico">Salvar</button>
+      <button class="btn neutro oculto" id="cancelarServico">Cancelar</button>
+    </div>
+
+    <div class="card">
+      <h2>Servicos</h2>
+      <div class="rolagem"><table>
+        <thead><tr><th>Nome</th><th>Duracao</th><th>Preco</th><th>Status</th><th></th></tr></thead>
+        <tbody id="listaServicos"></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <!-- HORARIOS -->
+  <section id="secao-horarios" class="oculto">
+    <div class="card">
+      <h2>Novo horario de funcionamento</h2>
+      <p class="ajuda">Pode cadastrar mais de uma faixa no mesmo dia (ex.: 09-12 e 13-19).</p>
+      <div class="linha">
+        <div class="campo">
+          <label for="eBarbeiro">Barbeiro</label>
+          <select id="eBarbeiro"></select>
+        </div>
+        <div class="campo">
+          <label for="eDia">Dia</label>
+          <select id="eDia"></select>
+        </div>
+        <div class="campo">
+          <label for="eInicio">Das</label>
+          <input type="time" id="eInicio" value="09:00">
+        </div>
+        <div class="campo">
+          <label for="eFim">Ate</label>
+          <input type="time" id="eFim" value="12:00">
+        </div>
+      </div>
+      <button class="btn" id="salvarExpediente">Adicionar</button>
+    </div>
+
+    <div class="card">
+      <h2>Horarios cadastrados</h2>
+      <div class="rolagem"><table>
+        <thead><tr><th>Dia</th><th>Faixa</th><th></th></tr></thead>
+        <tbody id="listaExpedientes"></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <!-- BLOQUEIOS -->
+  <section id="secao-bloqueios" class="oculto">
+    <div class="card">
+      <h2>Bloquear periodo</h2>
+      <p class="ajuda">Folga, feriado, medico. O periodo some da agenda dos clientes.</p>
+      <div class="linha">
+        <div class="campo">
+          <label for="bBarbeiro">Barbeiro</label>
+          <select id="bBarbeiro"></select>
+        </div>
+        <div class="campo">
+          <label for="bInicio">Inicio</label>
+          <input type="datetime-local" id="bInicio">
+        </div>
+        <div class="campo">
+          <label for="bFim">Fim</label>
+          <input type="datetime-local" id="bFim">
+        </div>
+      </div>
+      <div class="campo">
+        <label for="bMotivo">Motivo</label>
+        <input id="bMotivo" placeholder="Folga">
+      </div>
+      <button class="btn" id="salvarBloqueio">Bloquear</button>
+    </div>
+
+    <div class="card">
+      <h2>Bloqueios</h2>
+      <div class="rolagem"><table>
+        <thead><tr><th>Barbeiro</th><th>De</th><th>Ate</th><th>Motivo</th><th></th></tr></thead>
+        <tbody id="listaBloqueios"></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <!-- PRODUTOS -->
+  <section id="secao-produtos" class="oculto">
+    <div class="card">
+      <h2 id="tituloProduto">Novo produto</h2>
+      <p class="ajuda">Pomada, shampoo, cera. Vendido no balcao, nao entra na agenda.</p>
+      <input type="hidden" id="produtoId">
+
+      <div class="linha">
+        <div class="campo">
+          <label for="pNome">Nome</label>
+          <input id="pNome" placeholder="Pomada modeladora">
+        </div>
+        <div class="campo">
+          <label for="pPreco">Preco (R$)</label>
+          <input id="pPreco" type="number" value="35" min="0" step="0.01">
+        </div>
+        <div class="campo">
+          <label for="pEstoque">Estoque</label>
+          <input id="pEstoque" type="number" value="0" min="0">
+        </div>
+      </div>
+
+      <div class="campo">
+        <label for="pDescricao">Descricao</label>
+        <input id="pDescricao" placeholder="Opcional">
+      </div>
+
+      <div class="check" style="margin-bottom:16px">
+        <input type="checkbox" id="pAtivo" checked>
+        <label for="pAtivo">Ativo</label>
+      </div>
+
+      <button class="btn" id="salvarProduto">Salvar</button>
+      <button class="btn neutro oculto" id="cancelarProduto">Cancelar</button>
+    </div>
+
+    <div class="card">
+      <h2>Produtos</h2>
+      <div class="rolagem"><table>
+        <thead><tr><th>Nome</th><th>Preco</th><th>Estoque</th><th>Status</th><th></th></tr></thead>
+        <tbody id="listaProdutos"></tbody>
+      </table></div>
+      <div id="produtosVazio" class="vazio oculto">Nenhum produto cadastrado.</div>
+    </div>
+  </section>
+
+  <!-- CLIENTES -->
+  <section id="secao-clientes" class="oculto">
+    <div class="card">
+      <h2>Clientes</h2>
+      <p class="ajuda">Cadastro criado sozinho no primeiro contato. Aqui voce ajusta nome e bloqueio.</p>
+
+      <div class="linha" style="margin-bottom:16px">
+        <div class="campo" style="margin:0">
+          <label for="buscaCliente">Buscar por nome ou telefone</label>
+          <input id="buscaCliente" placeholder="Hyan ou 11987654321">
+        </div>
+        <div class="campo" style="margin:0;display:flex;align-items:flex-end">
+          <button class="btn neutro" id="btnBuscar">Buscar</button>
+        </div>
+      </div>
+
+      <div class="rolagem"><table>
+        <thead><tr><th>Nome</th><th>Telefone</th><th>Agendamentos</th><th>Status</th><th></th></tr></thead>
+        <tbody id="listaClientes"></tbody>
+      </table></div>
+      <div id="clientesVazio" class="vazio oculto">Nenhum cliente encontrado.</div>
+    </div>
+
+    <div class="card oculto" id="cardCliente">
+      <h2 id="tituloCliente">Cliente</h2>
+      <input type="hidden" id="clienteId">
+
+      <div class="linha">
+        <div class="campo">
+          <label for="clNome">Nome</label>
+          <input id="clNome">
+        </div>
+        <div class="campo" style="display:flex;align-items:flex-end">
+          <div class="check">
+            <input type="checkbox" id="clBloqueado">
+            <label for="clBloqueado">Bloqueado (nao consegue agendar)</label>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn" id="salvarCliente">Salvar</button>
+      <button class="btn neutro" id="fecharCliente">Fechar</button>
+
+      <h2 style="margin-top:24px">Historico</h2>
+      <div class="rolagem"><table>
+        <thead><tr><th>Quando</th><th>Servico</th><th>Barbeiro</th><th>Status</th></tr></thead>
+        <tbody id="historicoCliente"></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <!-- SISTEMA (so admin) -->
+  <section id="secao-sistema" class="oculto">
+    <div class="card">
+      <h2>Banco de dados <span id="statusBanco" class="tag">verificando</span></h2>
+      <p class="ajuda">
+        Somente leitura. A string de conexao vem da variavel de ambiente
+        <code>ConnectionStrings__Postgres</code> — nao fica no banco, senao a
+        aplicacao precisaria do banco para descobrir como chegar nele.
+      </p>
+      <div class="rolagem"><table><tbody id="infoBanco"></tbody></table></div>
+    </div>
+
+    <div class="card">
+      <h2>Aplicacao</h2>
+      <div class="rolagem"><table><tbody id="infoApp"></tbody></table></div>
+    </div>
+
+    <div class="card">
+      <h2>Registros</h2>
+      <div class="rolagem"><table><tbody id="infoContagem"></tbody></table></div>
+    </div>
+
+    <div class="card">
+      <h2>Variaveis de ambiente</h2>
+      <p class="ajuda">Onde configurar cada uma no Render.</p>
+      <div id="infoVars"></div>
+    </div>
+  </section>
+
+  <!-- CONFIGURACAO (so admin) -->
+  <section id="secao-config" class="oculto">
+    <div class="card">
+      <h2>Identificacao</h2>
+      <p class="ajuda">Nome que aparece para o cliente e endereco publico do sistema.</p>
+      <div class="campo">
+        <label for="nome">Nome da barbearia</label>
+        <input id="nome" placeholder="Barbearia do Joao">
+      </div>
+      <div class="campo">
+        <label for="url">URL publica</label>
+        <input id="url" placeholder="https://minha-api.onrender.com">
+        <p class="ajuda">Usada para montar o link enviado no WhatsApp.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Regras de agendamento</h2>
+      <p class="ajuda">Valem para o site e para o WhatsApp. Salvar aplica na hora, sem reiniciar.</p>
+
+      <div class="linha">
+        <div class="campo">
+          <label for="cfgIntervalo">Intervalo entre horarios (min)</label>
+          <input id="cfgIntervalo" type="number" min="5" max="120">
+          <p class="ajuda">De quanto em quanto tempo um atendimento pode comecar.</p>
+        </div>
+        <div class="campo">
+          <label for="cfgAntecedencia">Antecedencia minima (min)</label>
+          <input id="cfgAntecedencia" type="number" min="0" max="1440">
+          <p class="ajuda">Impede marcar "para daqui a 2 minutos".</p>
+        </div>
+      </div>
+
+      <div class="linha">
+        <div class="campo">
+          <label for="cfgDias">Agenda aberta por (dias)</label>
+          <input id="cfgDias" type="number" min="1" max="365">
+          <p class="ajuda">Ate quando o cliente consegue marcar.</p>
+        </div>
+        <div class="campo">
+          <label for="cfgCancelar">Cancelar ate (horas antes)</label>
+          <input id="cfgCancelar" type="number" min="0" max="168">
+          <p class="ajuda">Depois disso so a barbearia cancela.</p>
+        </div>
+      </div>
+
+      <div class="linha">
+        <div class="campo">
+          <label for="cfgMax">Maximo de horarios por cliente</label>
+          <input id="cfgMax" type="number" min="1" max="50">
+          <p class="ajuda">Trava contra quem tenta lotar a agenda.</p>
+        </div>
+        <div class="campo">
+          <label for="cfgMagic">Validade do link (min)</label>
+          <input id="cfgMagic" type="number" min="5" max="1440">
+          <p class="ajuda">Quanto tempo o link do WhatsApp funciona.</p>
+        </div>
+      </div>
+
+      <div class="campo">
+        <label for="cfgLimite">Limite de usuarios do sistema</label>
+        <input id="cfgLimite" type="number" min="1" max="500">
+        <p class="ajuda">Quantas contas ativas o sistema aceita. Bloqueia o cadastro ao estourar.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>WhatsApp <span id="statusWpp" class="tag">verificando</span></h2>
+      <p class="ajuda">Dados do app criado em developers.facebook.com.</p>
+
+      <div class="check campo">
+        <input type="checkbox" id="habilitado">
+        <label for="habilitado">Atendimento automatico ligado</label>
+      </div>
+
+      <div class="campo">
+        <label for="numeros">Numeros permitidos (modo teste)</label>
+        <input id="numeros" placeholder="5511987654321, 5511999998888">
+        <p class="ajuda" style="margin:6px 0 0">
+          So estes numeros sao atendidos. <strong>Deixe vazio somente em producao</strong> —
+          vazio significa atender qualquer um.
+        </p>
+      </div>
+
+      <div class="linha">
+        <div class="campo">
+          <label for="numeroExibicao">Numero do WhatsApp da barbearia</label>
+          <input id="numeroExibicao" placeholder="11987654321">
+          <p class="ajuda">So para exibir ao cliente. Nao e usado no envio.</p>
+        </div>
+        <div class="campo">
+          <label for="phoneId">Phone number ID</label>
+          <input id="phoneId" placeholder="123456789012345">
+          <p class="ajuda">Esse sim e o que envia. Vem do painel da Meta.</p>
+        </div>
+      </div>
+
+      <div class="campo">
+        <label for="verify">Verify token</label>
+        <input id="verify" placeholder="voce inventa esta string">
+      </div>
+
+      <div class="linha">
+        <div class="campo">
+          <label for="appSecret">App Secret <span id="tagSecret" class="tag"></span></label>
+          <input id="appSecret" type="password" placeholder="deixe vazio para manter o atual">
+        </div>
+        <div class="campo">
+          <label for="accessToken">Access Token <span id="tagToken" class="tag"></span></label>
+          <input id="accessToken" type="password" placeholder="deixe vazio para manter o atual">
+        </div>
+      </div>
+
+      <p class="ajuda">
+        Segredos nunca voltam para esta tela — so mostramos se estao preenchidos.
+        Campo vazio ao salvar mantem o valor que ja existe.
+      </p>
+
+      <div class="campo">
+        <label>URL do webhook (cole no painel da Meta)</label>
+        <div class="copiavel" id="webhookUrl">-</div>
+      </div>
+
+      <button class="btn" id="salvarConfig">Salvar configuracao</button>
+    </div>
+
+    <div class="card">
+      <h2>Testar envio</h2>
+      <p class="ajuda">Manda uma mensagem de teste para conferir se a integracao responde.</p>
+      <div class="linha">
+        <div class="campo">
+          <label for="telTeste">Telefone com DDD</label>
+          <input id="telTeste" placeholder="11987654321">
+        </div>
+        <div class="campo" style="display:flex;align-items:flex-end">
+          <button class="btn neutro" id="testar">Enviar teste</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FUNCIONARIOS -->
+  <section id="secao-funcionarios" class="oculto">
+    <div class="card">
+      <h2 id="tituloUsuario">Novo usuario</h2>
+      <p class="ajuda">
+        <strong>Admin</strong> tem acesso total.
+        <strong>Gestor</strong> manda na agenda da barbearia.
+        <strong>Barbeiro</strong> so consulta a agenda.
+      </p>
+
+      <input type="hidden" id="usuarioId">
+      <input type="hidden" id="uClienteId">
+
+      <div class="check" style="margin-bottom:12px">
+        <input type="checkbox" id="usarCliente">
+        <label for="usarCliente">Cadastrar a partir de alguem que ja e cliente</label>
+      </div>
+
+      <div class="campo oculto" id="boxCliente">
+        <label for="uCliente">Pessoa</label>
+        <select id="uCliente"></select>
+        <p class="ajuda">As duas fichas ficam ligadas, sem duplicar a pessoa.</p>
+      </div>
+
+      <div class="linha">
+        <div class="campo">
+          <label for="uNome">Nome</label>
+          <input id="uNome">
+        </div>
+        <div class="campo">
+          <label for="uEmail">E-mail (login)</label>
+          <input id="uEmail" type="email">
+        </div>
+        <div class="campo">
+          <label for="uTelefone">Telefone</label>
+          <input id="uTelefone" inputmode="numeric" placeholder="11987654321">
+        </div>
+      </div>
+
+      <div class="linha">
+        <div class="campo">
+          <label for="uSenha">Senha provisoria</label>
+          <input id="uSenha" type="password" placeholder="minimo 8 caracteres">
+          <p class="ajuda">O barbeiro sera obrigado a trocar no primeiro acesso.</p>
+        </div>
+        <div class="campo">
+          <label for="uPerfil">Perfil</label>
+          <select id="uPerfil">
+            <option value="Barbeiro">Barbeiro</option>
+            <option value="Gestor">Gestor</option>
+            <option value="Admin">Admin</option>
+          </select>
+        </div>
+      </div>
+
+      <label style="margin-top:6px">Permissoes</label>
+      <p class="ajuda" style="margin-top:0">
+        Acesso inicial do perfil <strong>Barbeiro</strong> (Admin e Gestor ja tem por
+        definicao). Depois de criado, ajuste tudo pela aba <strong>Permissoes</strong>,
+        que inclui o dashboard.
+      </p>
+
+      <div class="linha" style="margin-bottom:16px">
+        <div class="check">
+          <input type="checkbox" id="uPermServicos">
+          <label for="uPermServicos">Gerenciar servicos</label>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="uPermProdutos">
+          <label for="uPermProdutos">Gerenciar produtos</label>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="uPermClientes">
+          <label for="uPermClientes">Gerenciar clientes</label>
+        </div>
+      </div>
+
+      <div class="linha" style="margin-bottom:16px">
+        <div class="check">
+          <input type="checkbox" id="uAtende" checked>
+          <label for="uAtende">Aparece na agenda dos clientes</label>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="uAtivo" checked>
+          <label for="uAtivo">Ativo</label>
+        </div>
+      </div>
+
+      <button class="btn" id="salvarUsuario">Salvar</button>
+      <button class="btn neutro oculto" id="cancelarEdicao">Cancelar</button>
+    </div>
+
+    <div class="card">
+      <h2>Usuarios <span id="vagas"></span></h2>
+      <div class="rolagem"><table>
+        <thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Permissoes</th><th>Status</th><th></th></tr></thead>
+        <tbody id="listaUsuarios"></tbody>
+      </table></div>
+    </div>
+  </section>
+</main>
+</div>
+
+<script src="app.js?v=202608091806"></script>
+<script>
+const msg = document.getElementById('msg');
+let barbeiros = [];
+
+const GESTAO = ['Gestor'];
+const SO_ADMIN = [];
+
+function iniciar() {
+  document.getElementById('topo').innerHTML = montarTopo('Painel', true);
+
+  menuLateral(document.getElementById('menu'), [
+    {
+      titulo: 'Atendimento',
+      itens: [
+        { chave: 'agenda', nome: 'Agenda',           perfis: ['Gestor', 'Barbeiro'] },
+        { chave: 'novo',   nome: 'Novo agendamento', perfis: ['Gestor', 'Barbeiro'] }
+      ]
+    },
+    {
+      titulo: 'Resultados',
+      itens: [
+        { chave: 'dashboard', nome: 'Dashboard', permissao: 'dashboard' }
+      ]
+    },
+    {
+      titulo: 'Cadastros',
+      itens: [
+        { chave: 'servicos',  nome: 'Servicos',  permissao: 'servicos' },
+        { chave: 'produtos',  nome: 'Produtos',  permissao: 'produtos' },
+        { chave: 'horarios',  nome: 'Horarios',  perfis: GESTAO },
+        { chave: 'bloqueios', nome: 'Bloqueios', perfis: GESTAO }
+      ]
+    },
+    {
+      titulo: 'Pessoas',
+      itens: [
+        { chave: 'funcionarios', nome: 'Funcionarios', perfis: SO_ADMIN },
+        { chave: 'permissoes',   nome: 'Permissoes',   perfis: SO_ADMIN },
+        { chave: 'clientes',     nome: 'Clientes',     permissao: 'clientes' },
+        { chave: 'pessoas',      nome: 'Todas',        perfis: SO_ADMIN }
+      ]
+    },
+    {
+      titulo: 'Sistema',
+      itens: [
+        { chave: 'config',  nome: 'Configuracao', perfis: SO_ADMIN },
+        { chave: 'sistema', nome: 'Diagnostico',  perfis: SO_ADMIN }
+      ]
+    }
+  ], chave => {
+    if (chave === 'novo') prepararNovoAgendamento();
+    if (chave === 'pessoas') carregarPessoas();
+    if (chave === 'permissoes') carregarPermissoes();
+    if (chave === 'dashboard') carregarDashboard();
+  });
+
+  document.getElementById('eDia').innerHTML = DIAS.map((d, i) => `<option value="${i}">${d}</option>`).join('');
+
+  montarPeriodos();
+  document.getElementById('ontem').onclick = () => moverDia(-1);
+  document.getElementById('amanha').onclick = () => moverDia(1);
+  document.getElementById('aplicarFiltro').onclick = carregarAgenda;
+  document.getElementById('limparFiltro').onclick = limparFiltros;
+  document.getElementById('fBusca').onkeydown = e => { if (e.key === 'Enter') carregarAgenda(); };
+  document.getElementById('reData').onchange = carregarGradeReagendar;
+  document.getElementById('reConfirmar').onclick = confirmarReagendamento;
+  document.getElementById('reCancelar').onclick = fecharReagendar;
+
+  // Servicos dependem da lista de barbeiros para montar as caixas de "quem faz".
+  const barbeirosProntos = carregarBarbeiros();
+  barbeirosProntos.then(carregarAgenda);
+
+  if (Auth.permite('servicos')) {
+    document.getElementById('salvarServico').onclick = salvarServico;
+    document.getElementById('cancelarServico').onclick = limparServico;
+    barbeirosProntos.then(carregarServicos);
+  }
+
+  if (Auth.permite('produtos')) {
+    document.getElementById('salvarProduto').onclick = salvarProduto;
+    document.getElementById('cancelarProduto').onclick = limparProduto;
+    carregarProdutos();
+  }
+
+  if (Auth.permite('clientes')) {
+    document.getElementById('btnBuscar').onclick = carregarClientes;
+    document.getElementById('buscaCliente').onkeydown = e => { if (e.key === 'Enter') carregarClientes(); };
+    document.getElementById('salvarCliente').onclick = salvarCliente;
+    document.getElementById('fecharCliente').onclick =
+      () => document.getElementById('cardCliente').classList.add('oculto');
+    carregarClientes();
+  }
+
+  if (Auth.pode(GESTAO)) {
+    document.getElementById('salvarExpediente').onclick = salvarExpediente;
+    document.getElementById('salvarBloqueio').onclick = salvarBloqueio;
+    carregarExpedientes();
+    carregarBloqueios();
+  }
+
+  if (Auth.pode(GESTAO)) {
+    document.getElementById('agBuscar').onclick = buscarClienteParaAgendar;
+    document.getElementById('agBusca').onkeydown = e => { if (e.key === 'Enter') buscarClienteParaAgendar(); };
+    document.getElementById('agData').onchange = carregarHorariosPainel;
+    document.getElementById('agServico').onchange = carregarHorariosPainel;
+    document.getElementById('agBarbeiro').onchange = carregarHorariosPainel;
+    document.getElementById('agConfirmar').onclick = confirmarPeloPainel;
+  }
+
+  if (Auth.permite('dashboard')) {
+    montarPeriodosDashboard();
+    document.getElementById('dAplicar').onclick = carregarDashboard;
+  }
+
+  if (Auth.ehAdmin) {
+    document.getElementById('salvarConfig').onclick = salvarConfig;
+    document.getElementById('testar').onclick = testarWhatsApp;
+    document.getElementById('salvarUsuario').onclick = salvarUsuario;
+    document.getElementById('cancelarEdicao').onclick = limparFormUsuario;
+    document.getElementById('btnBuscarPessoa').onclick = carregarPessoas;
+    document.getElementById('buscaPessoa').onkeydown = e => { if (e.key === 'Enter') carregarPessoas(); };
+    document.getElementById('usarCliente').onchange = alternarOrigemFuncionario;
+
+    carregarConfig();
+    carregarUsuarios();
+    carregarSistema();
+  }
+}
+
+// ---- Novo agendamento pelo painel ----
+let agCliente = null;
+let agSlot = null;
+
+async function prepararNovoAgendamento() {
+  if (document.getElementById('agServico').options.length > 0) return;
+
+  const servicos = await api('/api/servicos');
+  document.getElementById('agServico').innerHTML =
+    servicos.map(s => `<option value="${s.id}">${s.nome} (${s.duracaoMinutos}min)</option>`).join('');
+
+  document.getElementById('agBarbeiro').innerHTML =
+    '<option value="">Qualquer barbeiro</option>' +
+    barbeiros.map(b => `<option value="${b.id}">${b.nome}</option>`).join('');
+
+  document.getElementById('agData').value = dataHoje();
+  carregarHorariosPainel();
+}
+
+async function buscarClienteParaAgendar() {
+  const termo = document.getElementById('agBusca').value.trim();
+  if (!termo) return;
+
+  const lista = await api('/api/clientes?busca=' + encodeURIComponent(termo));
+  const box = document.getElementById('agResultado');
+
+  if (lista.length === 0) {
+    box.innerHTML = '<p class="ajuda">Ninguem encontrado. Cadastre abaixo com nome e telefone.</p>';
+    return;
+  }
+
+  box.innerHTML = lista.slice(0, 6).map(c => `
+    <button data-id="${c.id}" data-nome="${c.nome || ''}">
+      <span><strong>${c.nome || 'sem nome'}</strong><br><span class="preco">${c.telefone}</span></span>
+      <span class="preco">${c.agendamentos} agend.</span>
+    </button>`).join('');
+
+  box.querySelectorAll('button').forEach(b => {
+    b.onclick = () => {
+      box.querySelectorAll('button').forEach(x => x.classList.remove('escolhido'));
+      b.classList.add('escolhido');
+      agCliente = { id: b.dataset.id, nome: b.dataset.nome };
+      // Escolheu da lista: os campos de cadastro novo saem de cena.
+      document.getElementById('agNome').value = '';
+      document.getElementById('agTelefone').value = '';
+      atualizarBotaoAgendar();
+    };
+  });
+}
+
+async function carregarHorariosPainel() {
+  agSlot = null;
+  atualizarBotaoAgendar();
+
+  const servicoId = document.getElementById('agServico').value;
+  const data = document.getElementById('agData').value;
+  if (!servicoId || !data) return;
+
+  const barbeiroId = document.getElementById('agBarbeiro').value;
+  const slots = await api(`/api/disponibilidade?data=${data}&servicoId=${servicoId}&grade=true`
+    + (barbeiroId ? `&barbeiroId=${barbeiroId}` : ''));
+
+  document.getElementById('agSemHorario').classList.toggle('oculto', slots.length > 0);
+
+  const porHora = {};
+  slots.forEach(s => {
+    const atual = porHora[s.hora];
+    if (!atual || (!atual.livre && s.livre)) porHora[s.hora] = s;
+  });
+
+  const box = document.getElementById('agHorarios');
+  box.innerHTML = Object.values(porHora).map(s => s.livre
+    ? `<button data-inicio="${s.inicioUtc}" data-barbeiro="${s.barbeiroId}">${s.hora}</button>`
+    : `<button class="ocupado" disabled>${s.hora}</button>`).join('');
+
+  box.querySelectorAll('button:not(.ocupado)').forEach(b => {
+    b.onclick = () => {
+      box.querySelectorAll('button').forEach(x => x.classList.remove('escolhido'));
+      b.classList.add('escolhido');
+      agSlot = { inicioUtc: b.dataset.inicio, barbeiroId: b.dataset.barbeiro };
+      atualizarBotaoAgendar();
+    };
+  });
+}
+
+function atualizarBotaoAgendar() {
+  const temPessoa = agCliente
+    || (document.getElementById('agTelefone').value.trim().length >= 10);
+  document.getElementById('agConfirmar').disabled = !(agSlot && temPessoa);
+}
+
+async function confirmarPeloPainel() {
+  aviso(msg, '');
+  const botao = document.getElementById('agConfirmar');
+  botao.disabled = true;
+
+  try {
+    const r = await api('/api/gestor/agendamentos', {
+      method: 'POST',
+      body: JSON.stringify({
+        clienteId: agCliente?.id || null,
+        telefone: document.getElementById('agTelefone').value,
+        nome: document.getElementById('agNome').value,
+        servicoId: document.getElementById('agServico').value,
+        inicioUtc: agSlot.inicioUtc,
+        barbeiroId: agSlot.barbeiroId,
+        observacao: document.getElementById('agObs').value
+      })
+    });
+
+    aviso(msg, `Agendado: ${r.cliente || r.telefone} em ${dataLegivel(r.inicio)}.`, 'ok');
+
+    agCliente = null;
+    agSlot = null;
+    ['agBusca', 'agNome', 'agTelefone', 'agObs'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('agResultado').innerHTML = '';
+    carregarHorariosPainel();
+    carregarAgenda();
+  } catch (e) {
+    aviso(msg, e.message);
+    carregarHorariosPainel();
+  }
+}
+
+// ---- Pessoas ----
+async function carregarPessoas() {
+  const termo = document.getElementById('buscaPessoa').value.trim();
+  const d = await api('/api/admin/pessoas' + (termo ? '?busca=' + encodeURIComponent(termo) : ''));
+
+  document.getElementById('listaPessoasFunc').innerHTML = d.funcionarios.map(f => `
+    <tr>
+      <td>${f.nome}${f.clienteId ? ' <span class="tag">tambem cliente</span>' : ''}</td>
+      <td>${f.email}</td>
+      <td>${f.telefone || '-'}</td>
+      <td><span class="tag">${f.perfil}</span></td>
+      <td><span class="tag ${f.ativo ? 'ok' : 'erro'}">${f.ativo ? 'ativo' : 'inativo'}</span></td>
+    </tr>`).join('') || '<tr><td colspan="5" class="vazio">Nenhum funcionario.</td></tr>';
+
+  document.getElementById('listaPessoasCli').innerHTML = d.clientes.map(c => `
+    <tr>
+      <td>${c.nome || '<span class="preco">sem nome</span>'}
+          ${c.ehFuncionario ? `<span class="tag ok">${c.ehFuncionario}</span>` : ''}</td>
+      <td>${c.telefone}</td>
+      <td>${c.agendamentos}</td>
+      <td><span class="tag ${c.bloqueado ? 'erro' : 'ok'}">${c.bloqueado ? 'bloqueado' : 'ativo'}</span></td>
+      <td>${c.ehFuncionario ? '' : `<button class="btn pequeno neutro" data-id="${c.id}" data-nome="${c.nome || ''}">Tornar funcionario</button>`}</td>
+    </tr>`).join('') || '<tr><td colspan="5" class="vazio">Nenhum cliente.</td></tr>';
+
+  document.querySelectorAll('#listaPessoasCli button').forEach(b => {
+    b.onclick = () => promoverParaFuncionario(b.dataset.id, b.dataset.nome);
+  });
+}
+
+// Abre o cadastro de funcionario ja preenchido a partir do cliente escolhido.
+function promoverParaFuncionario(clienteId, nome) {
+  document.querySelector('.lateral button[data-chave="funcionarios"]').click();
+
+  limparFormUsuario();
+  document.getElementById('usarCliente').checked = true;
+  alternarOrigemFuncionario();
+  document.getElementById('uClienteId').value = clienteId;
+  document.getElementById('uNome').value = nome;
+  document.getElementById('uPerfil').value = 'Barbeiro';
+  document.getElementById('tituloUsuario').textContent = 'Novo funcionario a partir de ' + (nome || 'cliente');
+}
+
+async function alternarOrigemFuncionario() {
+  const usando = document.getElementById('usarCliente').checked;
+  document.getElementById('boxCliente').classList.toggle('oculto', !usando);
+
+  if (!usando) { document.getElementById('uClienteId').value = ''; return; }
+
+  const lista = await api('/api/clientes');
+  document.getElementById('uCliente').innerHTML =
+    '<option value="">Selecione...</option>' +
+    lista.map(c => `<option value="${c.id}" data-nome="${c.nome || ''}">${c.nome || 'sem nome'} — ${c.telefone}</option>`).join('');
+
+  document.getElementById('uCliente').onchange = e => {
+    const op = e.target.selectedOptions[0];
+    document.getElementById('uClienteId').value = e.target.value;
+    if (op?.dataset.nome) document.getElementById('uNome').value = op.dataset.nome;
+  };
+}
+async function carregarProdutos() {
+  const lista = await api('/api/produtos');
+  const corpo = document.getElementById('listaProdutos');
+
+  document.getElementById('produtosVazio').classList.toggle('oculto', lista.length > 0);
+
+  corpo.innerHTML = lista.map(p => `
+    <tr>
+      <td>${p.nome}${p.descricao ? `<br><span class="preco">${p.descricao}</span>` : ''}</td>
+      <td>${moeda(p.precoCentavos)}</td>
+      <td>${p.estoque}</td>
+      <td><span class="tag ${p.ativo ? 'ok' : 'erro'}">${p.ativo ? 'ativo' : 'inativo'}</span></td>
+      <td>
+        <button class="btn pequeno neutro" data-editar="${p.id}">Editar</button>
+        <button class="btn pequeno perigo" data-remover="${p.id}">Remover</button>
+      </td>
+    </tr>`).join('');
+
+  corpo.querySelectorAll('[data-editar]').forEach(b => {
+    b.onclick = () => {
+      const p = lista.find(x => x.id === b.dataset.editar);
+      document.getElementById('produtoId').value = p.id;
+      document.getElementById('pNome').value = p.nome;
+      document.getElementById('pDescricao').value = p.descricao || '';
+      document.getElementById('pPreco').value = (p.precoCentavos / 100).toFixed(2);
+      document.getElementById('pEstoque').value = p.estoque;
+      document.getElementById('pAtivo').checked = p.ativo;
+      document.getElementById('tituloProduto').textContent = 'Editando ' + p.nome;
+      document.getElementById('cancelarProduto').classList.remove('oculto');
+      window.scrollTo(0, 0);
+    };
+  });
+
+  corpo.querySelectorAll('[data-remover]').forEach(b => {
+    b.onclick = async () => {
+      if (!confirm('Remover este produto?')) return;
+      await api('/api/produtos/' + b.dataset.remover, { method: 'DELETE' });
+      carregarProdutos();
+    };
+  });
+}
+
+function limparProduto() {
+  document.getElementById('produtoId').value = '';
+  document.getElementById('pNome').value = '';
+  document.getElementById('pDescricao').value = '';
+  document.getElementById('pPreco').value = 35;
+  document.getElementById('pEstoque').value = 0;
+  document.getElementById('pAtivo').checked = true;
+  document.getElementById('tituloProduto').textContent = 'Novo produto';
+  document.getElementById('cancelarProduto').classList.add('oculto');
+}
+
+async function salvarProduto() {
+  aviso(msg, '');
+  const id = document.getElementById('produtoId').value;
+
+  try {
+    await api(id ? '/api/produtos/' + id : '/api/produtos', {
+      method: id ? 'PUT' : 'POST',
+      body: JSON.stringify({
+        nome: document.getElementById('pNome').value,
+        descricao: document.getElementById('pDescricao').value,
+        precoCentavos: Math.round(Number(document.getElementById('pPreco').value) * 100),
+        estoque: Number(document.getElementById('pEstoque').value),
+        ativo: document.getElementById('pAtivo').checked
+      })
+    });
+    limparProduto();
+    carregarProdutos();
+    aviso(msg, 'Produto salvo.', 'ok');
+  } catch (e) { aviso(msg, e.message); }
+}
+async function carregarClientes() {
+  const busca = document.getElementById('buscaCliente').value.trim();
+  const lista = await api('/api/clientes' + (busca ? '?busca=' + encodeURIComponent(busca) : ''));
+  const corpo = document.getElementById('listaClientes');
+
+  document.getElementById('clientesVazio').classList.toggle('oculto', lista.length > 0);
+
+  corpo.innerHTML = lista.map(c => `
+    <tr>
+      <td>${c.nome || '<span class="preco">sem nome</span>'}</td>
+      <td>${c.telefone}</td>
+      <td>${c.agendamentos}</td>
+      <td><span class="tag ${c.bloqueado ? 'erro' : 'ok'}">${c.bloqueado ? 'bloqueado' : 'ativo'}</span></td>
+      <td><button class="btn pequeno neutro" data-id="${c.id}">Abrir</button></td>
+    </tr>`).join('');
+
+  corpo.querySelectorAll('button').forEach(b => {
+    b.onclick = () => abrirCliente(b.dataset.id);
+  });
+}
+
+async function abrirCliente(id) {
+  const c = await api('/api/clientes/' + id);
+
+  document.getElementById('clienteId').value = c.id;
+  document.getElementById('clNome').value = c.nome || '';
+  document.getElementById('clBloqueado').checked = c.bloqueado;
+  document.getElementById('tituloCliente').textContent = c.nome || c.telefone;
+
+  document.getElementById('historicoCliente').innerHTML = c.historico.length
+    ? c.historico.map(h => `
+        <tr>
+          <td>${dataLegivel(h.inicio)}</td>
+          <td>${h.servico}</td>
+          <td>${h.barbeiro}</td>
+          <td><span class="tag">${h.status}</span></td>
+        </tr>`).join('')
+    : '<tr><td colspan="4" class="vazio">Sem agendamentos.</td></tr>';
+
+  document.getElementById('cardCliente').classList.remove('oculto');
+  document.getElementById('cardCliente').scrollIntoView({ behavior: 'smooth' });
+}
+
+async function salvarCliente() {
+  aviso(msg, '');
+  try {
+    await api('/api/clientes/' + document.getElementById('clienteId').value, {
+      method: 'PUT',
+      body: JSON.stringify({
+        nome: document.getElementById('clNome').value,
+        bloqueado: document.getElementById('clBloqueado').checked
+      })
+    });
+    carregarClientes();
+    aviso(msg, 'Cliente salvo.', 'ok');
+  } catch (e) { aviso(msg, e.message); }
+}
+async function carregarSistema() {
+  const s = await api('/api/admin/sistema');
+  const linha = (r, v) => `<tr><th style="width:38%">${r}</th><td>${v}</td></tr>`;
+
+  const status = document.getElementById('statusBanco');
+  status.textContent = s.banco.conectado ? 'conectado' : 'sem conexao';
+  status.className = 'tag ' + (s.banco.conectado ? 'ok' : 'erro');
+
+  document.getElementById('infoBanco').innerHTML =
+    linha('Host', s.banco.host) + linha('Porta', s.banco.porta) +
+    linha('Banco', s.banco.nome) + linha('Usuario', s.banco.usuario) +
+    linha('Senha', s.banco.senha) + linha('SSL', s.banco.ssl) +
+    linha('Versao', s.banco.versao || '-') +
+    (s.banco.erro ? linha('Erro', `<span style="color:var(--erro)">${s.banco.erro}</span>`) : '');
+
+  document.getElementById('infoApp').innerHTML =
+    linha('Ambiente', s.aplicacao.ambiente) + linha('.NET', s.aplicacao.dotnet) +
+    linha('Fuso', s.aplicacao.fuso) +
+    linha('Hora local', dataLegivel(s.aplicacao.agoraLocal)) +
+    linha('Hora UTC', new Date(s.aplicacao.agoraUtc).toISOString().slice(0, 16).replace('T', ' '));
+
+  document.getElementById('infoContagem').innerHTML =
+    linha('Usuarios', s.contagem.usuarios) + linha('Clientes', s.contagem.clientes) +
+    linha('Servicos', s.contagem.servicos) + linha('Produtos', s.contagem.produtos) +
+    linha('Agendamentos', s.contagem.agendamentos);
+
+  document.getElementById('infoVars').innerHTML =
+    s.variaveis.map(v => `<div class="copiavel" style="margin-bottom:7px">${v}</div>`).join('');
+}
+// Cada periodo devolve [de, ate] em ISO local.
+const PERIODOS = {
+  hoje:    () => { const h = dataHoje(); return [h, h]; },
+  semana:  () => {
+    const d = new Date();
+    // Semana comecando na segunda: domingo (0) volta 6 dias, nao 0.
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    const fim = new Date(d); fim.setDate(fim.getDate() + 6);
+    return [iso(d), iso(fim)];
+  },
+  mes: () => {
+    const h = new Date();
+    return [iso(new Date(h.getFullYear(), h.getMonth(), 1)),
+            iso(new Date(h.getFullYear(), h.getMonth() + 1, 0))];
+  },
+  semestre: () => {
+    const h = new Date();
+    const fim = new Date(h); fim.setMonth(fim.getMonth() + 6);
+    return [iso(h), iso(fim)];
+  },
+  ano: () => {
+    const h = new Date();
+    return [iso(new Date(h.getFullYear(), 0, 1)), iso(new Date(h.getFullYear(), 11, 31))];
+  }
+};
+
+function iso(d) {
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+}
+
+function montarPeriodos() {
+  const rotulos = { hoje: 'Hoje', semana: 'Semana', mes: 'Mes', semestre: '6 meses', ano: 'Ano' };
+
+  document.getElementById('periodos').innerHTML =
+    Object.keys(PERIODOS).map(k =>
+      `<button data-p="${k}" class="${k === 'hoje' ? 'ativa' : ''}">${rotulos[k]}</button>`).join('') +
+    '<button data-p="custom">Personalizado</button>';
+
+  document.querySelectorAll('#periodos button').forEach(b => {
+    b.onclick = () => {
+      document.querySelectorAll('#periodos button').forEach(x => x.classList.remove('ativa'));
+      b.classList.add('ativa');
+
+      if (b.dataset.p !== 'custom') {
+        const [de, ate] = PERIODOS[b.dataset.p]();
+        document.getElementById('fDe').value = de;
+        document.getElementById('fAte').value = ate;
+      }
+
+      carregarAgenda();
+    };
+  });
+
+  const [de, ate] = PERIODOS.hoje();
+  document.getElementById('fDe').value = de;
+  document.getElementById('fAte').value = ate;
+}
+
+// Setas movem os dois extremos juntos, preservando o tamanho da janela.
+function moverDia(delta) {
+  const de = new Date(document.getElementById('fDe').value + 'T12:00:00');
+  const ate = new Date(document.getElementById('fAte').value + 'T12:00:00');
+  const dias = Math.max(1, Math.round((ate - de) / 86400000) + 1);
+
+  de.setDate(de.getDate() + delta * dias);
+  ate.setDate(ate.getDate() + delta * dias);
+
+  document.getElementById('fDe').value = iso(de);
+  document.getElementById('fAte').value = iso(ate);
+
+  document.querySelectorAll('#periodos button').forEach(x => x.classList.remove('ativa'));
+  document.querySelector('#periodos button[data-p="custom"]').classList.add('ativa');
+  carregarAgenda();
+}
+
+function limparFiltros() {
+  ['fBusca', 'fHoraDe', 'fHoraAte'].forEach(id => document.getElementById(id).value = '');
+  ['fBarbeiro', 'fServico', 'fStatus', 'fOrigem'].forEach(id => document.getElementById(id).value = '');
+  document.querySelector('#periodos button[data-p="hoje"]').click();
+}
+
+async function carregarBarbeiros() {
+  barbeiros = await api('/api/gestor/barbeiros');
+  const opcoes = barbeiros.map(b => `<option value="${b.id}">${b.nome}</option>`).join('');
+  document.getElementById('eBarbeiro').innerHTML = opcoes;
+  document.getElementById('bBarbeiro').innerHTML = opcoes;
+  document.getElementById('fBarbeiro').innerHTML = '<option value="">Todos</option>' + opcoes;
+
+  // Barbeiro cai direto na propria agenda; ainda pode trocar para Todos.
+  if (Auth.perfil === 'Barbeiro' && barbeiros.some(b => b.id === Auth.id))
+    document.getElementById('fBarbeiro').value = Auth.id;
+
+  const servicos = await api('/api/servicos');
+  document.getElementById('fServico').innerHTML = '<option value="">Todos</option>' +
+    servicos.map(s => `<option value="${s.id}">${s.nome}</option>`).join('');
+}
+
+function filtrosDaTela() {
+  const p = new URLSearchParams({
+    de: document.getElementById('fDe').value,
+    ate: document.getElementById('fAte').value
+  });
+
+  const opcionais = {
+    busca: 'fBusca', barbeiroId: 'fBarbeiro', servicoId: 'fServico',
+    status: 'fStatus', origem: 'fOrigem', horaDe: 'fHoraDe', horaAte: 'fHoraAte'
+  };
+
+  for (const [chave, id] of Object.entries(opcionais)) {
+    const v = document.getElementById(id).value.trim();
+    if (v) p.set(chave, v);
+  }
+
+  return p;
+}
+
+async function carregarAgenda() {
+  const r = await api('/api/gestor/agenda?' + filtrosDaTela());
+  const corpo = document.getElementById('listaAgenda');
+
+  document.getElementById('agendaVazia').classList.toggle('oculto', r.total > 0);
+
+  const truncada = document.getElementById('agendaTruncada');
+  truncada.classList.toggle('oculto', !(r.truncado || r.total > r.itens.length));
+  truncada.textContent = `Mostrando ${r.itens.length} de ${r.total}. Estreite o periodo para ver o resto.`;
+
+  const resumo = document.getElementById('resumoAgenda');
+  resumo.classList.toggle('oculto', r.total === 0);
+  resumo.innerHTML = `
+    <div><span class="rot">Total</span><span class="val">${r.total}</span></div>
+    <div><span class="rot">Confirmados</span><span class="val">${r.resumo.confirmados}</span></div>
+    <div><span class="rot">Concluidos</span><span class="val">${r.resumo.concluidos}</span></div>
+    <div><span class="rot">Cancelados</span><span class="val">${r.resumo.cancelados}</span></div>
+    <div><span class="rot">Tempo</span><span class="val">${horas(r.resumo.minutos)}</span></div>
+    <div><span class="rot">Previsto</span><span class="val">${moeda(r.resumo.receitaCentavos)}</span></div>`;
+
+  corpo.innerHTML = r.itens.map(a => `
+    <tr style="${a.status === 'Cancelado' ? 'opacity:.45' : ''}">
+      <td><strong>${dataLegivel(a.inicio)}</strong></td>
+      <td>${a.cliente || '-'}<br><span class="preco">${a.telefone}</span></td>
+      <td>${a.servico}<br><span class="preco">${moeda(a.precoCentavos)}</span></td>
+      <td>${a.duracao} min</td>
+      <td>${a.barbeiro}</td>
+      <td><span class="tag">${a.origem}</span></td>
+      <td><span class="tag ${a.status === 'Cancelado' ? 'erro' : 'ok'}">${a.status}</span></td>
+      <td>${a.status === 'Cancelado' ? '' : `
+        <button class="btn pequeno neutro" data-mover="${a.id}"
+          data-info="${a.cliente || a.telefone} — ${a.servico}">Reagendar</button>
+        <button class="btn pequeno perigo" data-cancelar="${a.id}">Cancelar</button>`}</td>
+    </tr>`).join('');
+
+  corpo.querySelectorAll('[data-cancelar]').forEach(b => {
+    b.onclick = async () => {
+      if (!confirm('Cancelar este agendamento?')) return;
+      await api(`/api/gestor/agendamentos/${b.dataset.cancelar}/cancelar`, { method: 'POST' });
+      carregarAgenda();
+    };
+  });
+
+  corpo.querySelectorAll('[data-mover]').forEach(b => {
+    b.onclick = () => abrirReagendar(b.dataset.mover, b.dataset.info);
+  });
+}
+
+function horas(min) {
+  if (min < 60) return min + 'min';
+  const h = Math.floor(min / 60), m = min % 60;
+  return m ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`;
+}
+
+// ---- Reagendamento ----
+let reSlot = null;
+
+function abrirReagendar(id, info) {
+  reSlot = null;
+  document.getElementById('reagendarId').value = id;
+  document.getElementById('subReagendar').textContent = info;
+  document.getElementById('reData').value = dataHoje();
+  document.getElementById('reConfirmar').disabled = true;
+  document.getElementById('cardReagendar').classList.remove('oculto');
+  document.getElementById('cardReagendar').scrollIntoView({ behavior: 'smooth' });
+  carregarGradeReagendar();
+}
+
+function fecharReagendar() {
+  document.getElementById('cardReagendar').classList.add('oculto');
+  reSlot = null;
+}
+
+async function carregarGradeReagendar() {
+  reSlot = null;
+  document.getElementById('reConfirmar').disabled = true;
+
+  const id = document.getElementById('reagendarId').value;
+  const data = document.getElementById('reData').value;
+  const slots = await api(`/api/gestor/agendamentos/${id}/grade?data=${data}`);
+
+  document.getElementById('reSemHorario').classList.toggle('oculto', slots.length > 0);
+
+  const porHora = {};
+  slots.forEach(s => {
+    const atual = porHora[s.hora];
+    if (!atual || (!atual.livre && s.livre)) porHora[s.hora] = s;
+  });
+
+  const box = document.getElementById('reHorarios');
+  box.innerHTML = Object.values(porHora).map(s => s.livre
+    ? `<button data-inicio="${s.inicioUtc}" data-barbeiro="${s.barbeiroId}">${s.hora}</button>`
+    : `<button class="ocupado" disabled>${s.hora}</button>`).join('');
+
+  box.querySelectorAll('button:not(.ocupado)').forEach(b => {
+    b.onclick = () => {
+      box.querySelectorAll('button').forEach(x => x.classList.remove('escolhido'));
+      b.classList.add('escolhido');
+      reSlot = { inicioUtc: b.dataset.inicio, barbeiroId: b.dataset.barbeiro };
+      document.getElementById('reConfirmar').disabled = false;
+    };
+  });
+}
+
+async function confirmarReagendamento() {
+  aviso(msg, '');
+  const botao = document.getElementById('reConfirmar');
+  botao.disabled = true;
+
+  try {
+    const r = await api(`/api/gestor/agendamentos/${document.getElementById('reagendarId').value}/reagendar`, {
+      method: 'POST',
+      body: JSON.stringify({ novoInicioUtc: reSlot.inicioUtc, barbeiroId: reSlot.barbeiroId })
+    });
+
+    aviso(msg, `Movido de ${dataLegivel(r.de)} para ${dataLegivel(r.para)} com ${r.barbeiro}.`, 'ok');
+    fecharReagendar();
+    carregarAgenda();
+  } catch (e) {
+    aviso(msg, e.message);
+    carregarGradeReagendar();
+  }
+}
+function marcarBarbeirosDoServico(ids) {
+  document.getElementById('sBarbeiros').innerHTML = barbeiros.map(b => `
+    <div class="check" style="flex:none">
+      <input type="checkbox" id="sb-${b.id}" value="${b.id}"
+        ${ids.includes(b.id) ? 'checked' : ''}>
+      <label for="sb-${b.id}">${b.nome}</label>
+    </div>`).join('');
+}
+
+async function carregarServicos() {
+  const lista = await api('/api/gestor/servicos');
+  const corpo = document.getElementById('listaServicos');
+
+  marcarBarbeirosDoServico([]);
+
+  corpo.innerHTML = lista.map(s => `
+    <tr>
+      <td>${s.nome}<br><span class="preco">${s.barbeiroIds.length === 0
+        ? 'todos os profissionais'
+        : barbeiros.filter(b => s.barbeiroIds.includes(b.id)).map(b => b.nome).join(', ')
+          || 'nenhum profissional ativo'}</span></td>
+      <td>${s.duracaoMinutos} min</td>
+      <td>${moeda(s.precoCentavos)}</td>
+      <td><span class="tag ${s.ativo ? 'ok' : 'erro'}">${s.ativo ? 'ativo' : 'inativo'}</span></td>
+      <td><button class="btn pequeno neutro" data-id="${s.id}">Editar</button></td>
+    </tr>`).join('');
+
+  corpo.querySelectorAll('button').forEach(b => {
+    b.onclick = () => {
+      const s = lista.find(x => x.id === b.dataset.id);
+      document.getElementById('servicoId').value = s.id;
+      document.getElementById('sNome').value = s.nome;
+      document.getElementById('sDuracao').value = s.duracaoMinutos;
+      document.getElementById('sPreco').value = (s.precoCentavos / 100).toFixed(2);
+      document.getElementById('sAtivo').checked = s.ativo;
+      marcarBarbeirosDoServico(s.barbeiroIds);
+      document.getElementById('tituloServico').textContent = 'Editando ' + s.nome;
+      document.getElementById('cancelarServico').classList.remove('oculto');
+      window.scrollTo(0, 0);
+    };
+  });
+}
+
+function limparServico() {
+  document.getElementById('servicoId').value = '';
+  document.getElementById('sNome').value = '';
+  document.getElementById('sDuracao').value = 30;
+  document.getElementById('sPreco').value = 40;
+  document.getElementById('sAtivo').checked = true;
+  marcarBarbeirosDoServico([]);
+  document.getElementById('tituloServico').textContent = 'Novo servico';
+  document.getElementById('cancelarServico').classList.add('oculto');
+}
+
+async function salvarServico() {
+  aviso(msg, '');
+  const id = document.getElementById('servicoId').value;
+
+  try {
+    await api(id ? `/api/gestor/servicos/${id}` : '/api/gestor/servicos', {
+      method: id ? 'PUT' : 'POST',
+      body: JSON.stringify({
+        nome: document.getElementById('sNome').value,
+        duracaoMinutos: Number(document.getElementById('sDuracao').value),
+        precoCentavos: Math.round(Number(document.getElementById('sPreco').value) * 100),
+        ativo: document.getElementById('sAtivo').checked,
+        barbeiroIds: [...document.querySelectorAll('#sBarbeiros input:checked')].map(c => c.value)
+      })
+    });
+    limparServico();
+    carregarServicos();
+    aviso(msg, 'Servico salvo.', 'ok');
+  } catch (e) { aviso(msg, e.message); }
+}
+async function carregarExpedientes() {
+  const lista = await api('/api/gestor/expedientes');
+  const corpo = document.getElementById('listaExpedientes');
+
+  corpo.innerHTML = lista.map(e => `
+    <tr>
+      <td>${DIAS[e.diaSemana]}</td>
+      <td>${e.horaInicio} - ${e.horaFim}</td>
+      <td><button class="btn pequeno perigo" data-id="${e.id}">Remover</button></td>
+    </tr>`).join('');
+
+  corpo.querySelectorAll('button').forEach(b => {
+    b.onclick = async () => {
+      await api(`/api/gestor/expedientes/${b.dataset.id}`, { method: 'DELETE' });
+      carregarExpedientes();
+    };
+  });
+}
+
+async function salvarExpediente() {
+  aviso(msg, '');
+  try {
+    await api('/api/gestor/expedientes', {
+      method: 'POST',
+      body: JSON.stringify({
+        barbeiroId: document.getElementById('eBarbeiro').value,
+        diaSemana: Number(document.getElementById('eDia').value),
+        horaInicio: document.getElementById('eInicio').value,
+        horaFim: document.getElementById('eFim').value
+      })
+    });
+    carregarExpedientes();
+    aviso(msg, 'Horario adicionado.', 'ok');
+  } catch (e) { aviso(msg, e.message); }
+}
+async function carregarBloqueios() {
+  const lista = await api('/api/gestor/bloqueios');
+  const corpo = document.getElementById('listaBloqueios');
+
+  corpo.innerHTML = lista.map(b => `
+    <tr>
+      <td>${b.barbeiro}</td>
+      <td>${dataLegivel(b.inicio)}</td>
+      <td>${dataLegivel(b.fim)}</td>
+      <td>${b.motivo || '-'}</td>
+      <td><button class="btn pequeno perigo" data-id="${b.id}">Remover</button></td>
+    </tr>`).join('');
+
+  corpo.querySelectorAll('button').forEach(b => {
+    b.onclick = async () => {
+      await api(`/api/gestor/bloqueios/${b.dataset.id}`, { method: 'DELETE' });
+      carregarBloqueios();
+    };
+  });
+}
+
+async function salvarBloqueio() {
+  aviso(msg, '');
+  try {
+    await api('/api/gestor/bloqueios', {
+      method: 'POST',
+      body: JSON.stringify({
+        barbeiroId: document.getElementById('bBarbeiro').value,
+        inicioLocal: document.getElementById('bInicio').value,
+        fimLocal: document.getElementById('bFim').value,
+        motivo: document.getElementById('bMotivo').value
+      })
+    });
+    carregarBloqueios();
+    aviso(msg, 'Bloqueio criado.', 'ok');
+  } catch (e) { aviso(msg, e.message); }
+}
+async function carregarConfig() {
+  try { aplicarConfig(await api('/api/admin/config')); }
+  catch (e) { aviso(msg, e.message); }
+}
+
+function aplicarConfig(c) {
+  document.getElementById('nome').value = c['barbearia.nome'] || '';
+  document.getElementById('url').value = c['app.urlPublica'] || '';
+
+  document.getElementById('cfgIntervalo').value = c['barbearia.intervaloSlotMinutos'];
+  document.getElementById('cfgAntecedencia').value = c['barbearia.antecedenciaMinimaMinutos'];
+  document.getElementById('cfgDias').value = c['barbearia.diasMaximosNoFuturo'];
+  document.getElementById('cfgCancelar').value = c['barbearia.horasMinimasParaCancelar'];
+  document.getElementById('cfgMax').value = c['barbearia.maxAgendamentosPorCliente'];
+  document.getElementById('cfgMagic').value = c['app.magicLinkMinutos'];
+  document.getElementById('cfgLimite').value = c['sistema.limiteUsuarios'];
+
+  document.getElementById('habilitado').checked = !!c['whatsapp.habilitado'];
+  document.getElementById('verify').value = c['whatsapp.verifyToken'] || '';
+  document.getElementById('phoneId').value = c['whatsapp.phoneNumberId'] || '';
+  document.getElementById('numeroExibicao').value = c['whatsapp.numeroExibicao'] || '';
+  document.getElementById('numeros').value = c['whatsapp.numerosPermitidos'] || '';
+  document.getElementById('appSecret').value = '';
+  document.getElementById('accessToken').value = '';
+
+  marcar('tagSecret', c['whatsapp.appSecretPreenchido']);
+  marcar('tagToken', c['whatsapp.accessTokenPreenchido']);
+
+  const status = document.getElementById('statusWpp');
+  status.textContent = c['whatsapp.pronto'] ? 'pronto' : 'incompleto';
+  status.className = 'tag ' + (c['whatsapp.pronto'] ? 'ok' : 'erro');
+
+  const base = (c['app.urlPublica'] || location.origin).replace(/\/$/, '');
+  document.getElementById('webhookUrl').textContent = base + '/webhook/whatsapp';
+}
+
+function marcar(id, preenchido) {
+  const tag = document.getElementById(id);
+  tag.textContent = preenchido ? 'salvo' : 'vazio';
+  tag.className = 'tag ' + (preenchido ? 'ok' : 'erro');
+}
+
+async function salvarConfig() {
+  aviso(msg, '');
+  try {
+    aplicarConfig(await api('/api/admin/config', {
+      method: 'PUT',
+      body: JSON.stringify({
+        barbeariaNome: document.getElementById('nome').value,
+        appUrlPublica: document.getElementById('url').value,
+        magicLinkMinutos: Number(document.getElementById('cfgMagic').value),
+        limiteUsuarios: Number(document.getElementById('cfgLimite').value),
+        intervaloSlotMinutos: Number(document.getElementById('cfgIntervalo').value),
+        antecedenciaMinimaMinutos: Number(document.getElementById('cfgAntecedencia').value),
+        diasMaximosNoFuturo: Number(document.getElementById('cfgDias').value),
+        horasMinimasParaCancelar: Number(document.getElementById('cfgCancelar').value),
+        maxAgendamentosPorCliente: Number(document.getElementById('cfgMax').value),
+        whatsAppHabilitado: document.getElementById('habilitado').checked,
+        verifyToken: document.getElementById('verify').value,
+        phoneNumberId: document.getElementById('phoneId').value,
+        numeroExibicao: document.getElementById('numeroExibicao').value,
+        numerosPermitidos: document.getElementById('numeros').value,
+        appSecret: document.getElementById('appSecret').value,
+        accessToken: document.getElementById('accessToken').value
+      })
+    }));
+    aviso(msg, 'Configuracao salva.', 'ok');
+  } catch (e) { aviso(msg, e.message); }
+}
+
+async function testarWhatsApp() {
+  aviso(msg, '');
+  try {
+    await api('/api/admin/whatsapp/teste', {
+      method: 'POST',
+      body: JSON.stringify({ telefone: document.getElementById('telTeste').value })
+    });
+    aviso(msg, 'Mensagem enviada. Confira o WhatsApp.', 'ok');
+  } catch (e) { aviso(msg, e.message); }
+}
+async function carregarUsuarios() {
+  const dados = await api('/api/admin/usuarios');
+  const lista = dados.usuarios;
+  const corpo = document.getElementById('listaUsuarios');
+
+  const cheio = dados.emUso >= dados.limite;
+  document.getElementById('vagas').innerHTML =
+    `<span class="tag ${cheio ? 'erro' : 'ok'}">${dados.emUso} de ${dados.limite} usuarios ativos</span>`;
+
+  corpo.innerHTML = lista.map(u => {
+    const perms = [
+      u.podeGerenciarServicos ? 'servicos' : null,
+      u.podeGerenciarProdutos ? 'produtos' : null,
+      u.podeGerenciarClientes ? 'clientes' : null
+    ].filter(Boolean);
+
+    return `
+    <tr>
+      <td>${u.nome}${u.precisaTrocarSenha ? '<br><span class="tag erro">senha provisoria</span>' : ''}</td>
+      <td>${u.email}</td>
+      <td><span class="tag">${u.perfil}</span></td>
+      <td>${u.perfil === 'Admin' ? '<span class="preco">tudo</span>' : (perms.join(', ') || '<span class="preco">nenhuma</span>')}</td>
+      <td><span class="tag ${u.ativo ? 'ok' : 'erro'}">${u.ativo ? 'ativo' : 'inativo'}</span></td>
+      <td><button class="btn pequeno neutro" data-id="${u.id}">Editar</button></td>
+    </tr>`;
+  }).join('');
+
+  corpo.querySelectorAll('button').forEach(b => {
+    b.onclick = () => editarUsuario(lista.find(u => u.id === b.dataset.id));
+  });
+}
+
+function editarUsuario(u) {
+  document.getElementById('usuarioId').value = u.id;
+  document.getElementById('uNome').value = u.nome;
+  document.getElementById('uEmail').value = u.email;
+  document.getElementById('uEmail').disabled = true;
+  document.getElementById('uSenha').value = '';
+  document.getElementById('uSenha').placeholder = 'deixe vazio para manter';
+  document.getElementById("uTelefone").value = u.telefone || "";
+  document.getElementById('uPerfil').value = u.perfil;
+  document.getElementById('uAtende').checked = u.atende;
+  document.getElementById('uAtivo').checked = u.ativo;
+  document.getElementById('uPermServicos').checked = u.podeGerenciarServicos;
+  document.getElementById('uPermProdutos').checked = u.podeGerenciarProdutos;
+  document.getElementById('uPermClientes').checked = u.podeGerenciarClientes;
+  document.getElementById('tituloUsuario').textContent = 'Editando ' + u.nome;
+  document.getElementById('cancelarEdicao').classList.remove('oculto');
+  window.scrollTo(0, 0);
+}
+
+function limparFormUsuario() {
+  document.getElementById('usuarioId').value = '';
+  document.getElementById('uNome').value = '';
+  document.getElementById('uEmail').value = '';
+  document.getElementById('uEmail').disabled = false;
+  document.getElementById('uSenha').value = '';
+  document.getElementById('uSenha').placeholder = 'minimo 8 caracteres';
+  document.getElementById('uPerfil').value = 'Barbeiro';
+  document.getElementById('uAtende').checked = true;
+  document.getElementById('uAtivo').checked = true;
+  document.getElementById('uPermServicos').checked = false;
+  document.getElementById('uPermProdutos').checked = false;
+  document.getElementById('uPermClientes').checked = false;
+  document.getElementById('uTelefone').value = '';
+  document.getElementById('uClienteId').value = '';
+  document.getElementById('usarCliente').checked = false;
+  document.getElementById('boxCliente').classList.add('oculto');
+  document.getElementById('tituloUsuario').textContent = 'Novo funcionario';
+  document.getElementById('cancelarEdicao').classList.add('oculto');
+}
+
+async function salvarUsuario() {
+  aviso(msg, '');
+  const id = document.getElementById('usuarioId').value;
+
+  try {
+    await api(id ? `/api/admin/usuarios/${id}` : '/api/admin/usuarios', {
+      method: id ? 'PUT' : 'POST',
+      body: JSON.stringify({
+        nome: document.getElementById('uNome').value,
+        email: document.getElementById('uEmail').value,
+        senha: document.getElementById('uSenha').value || null,
+        perfil: document.getElementById('uPerfil').value,
+        atende: document.getElementById('uAtende').checked,
+        ativo: document.getElementById('uAtivo').checked,
+        podeGerenciarServicos: document.getElementById('uPermServicos').checked,
+        podeGerenciarProdutos: document.getElementById('uPermProdutos').checked,
+        podeGerenciarClientes: document.getElementById('uPermClientes').checked
+        , telefone: document.getElementById("uTelefone").value
+        , clienteId: document.getElementById("uClienteId").value || null
+      })
+    });
+
+    limparFormUsuario();
+    await carregarUsuarios();
+    aviso(msg, 'Usuario salvo.', 'ok');
+  } catch (e) { aviso(msg, e.message); }
+}
+
+// Por ultimo: iniciar antes das constantes acima estoura ReferenceError (TDZ).
+if (Auth.exigirLogin()) iniciar();
+
+// ---- Permissoes ----
+async function carregarPermissoes() {
+  const d = await api('/api/admin/permissoes');
+
+  document.getElementById('permCabecalho').innerHTML =
+    '<th>Funcionario</th><th>Perfil</th>' + d.permissoes.map(p => `<th>${p.nome}</th>`).join('');
+
+  document.getElementById('permCorpo').innerHTML = d.pessoas.map(p => {
+    const celulas = d.permissoes.map(perm => {
+      // Admin e Gestor recebem por perfil; caixa marcada sugeriria que desmarcar tira, e nao tira.
+      if (p.perfil === 'Admin') return '<td><span class="tag ok">tudo</span></td>';
+      if (perm.gestorTemSempre && p.perfil === 'Gestor')
+        return '<td><span class="tag ok">por perfil</span></td>';
+
+      return `<td><input type="checkbox" data-pessoa="${p.id}" data-chave="${perm.chave}"
+        ${p.concedidas[perm.chave] ? 'checked' : ''}></td>`;
+    }).join('');
+
+    return `<tr>
+      <td>${p.nome}<br><span class="preco">${p.email}</span></td>
+      <td><span class="tag">${p.perfil}</span></td>${celulas}</tr>`;
+  }).join('');
+
+  document.querySelectorAll('#permCorpo input[type=checkbox]').forEach(c => {
+    c.onchange = async () => {
+      c.disabled = true;
+      try {
+        await api('/api/admin/permissoes', {
+          method: 'POST',
+          body: JSON.stringify({
+            barbeiroId: c.dataset.pessoa, chave: c.dataset.chave, concedida: c.checked
+          })
+        });
+        aviso(msg, 'Permissao salva. Vale no proximo login da pessoa.', 'ok');
+      } catch (e) {
+        c.checked = !c.checked;
+        aviso(msg, e.message);
+      }
+      c.disabled = false;
+    };
+  });
+
+  document.getElementById('permLegenda').innerHTML = d.permissoes.map(p =>
+    `<tr><th style="width:24%">${p.nome}</th><td>${p.descricao}</td></tr>`).join('');
+}
+
+// ---- Dashboard ----
+function diasAtras(n) { const d = new Date(); d.setDate(d.getDate() + n); return iso(d); }
+
+const PERIODOS_D = {
+  hoje: () => [dataHoje(), dataHoje()],
+  d7:   () => [diasAtras(-6), dataHoje()],
+  d30:  () => [diasAtras(-29), dataHoje()],
+  mes:  () => { const h = new Date(); return [iso(new Date(h.getFullYear(), h.getMonth(), 1)), dataHoje()]; },
+  m6:   () => [diasAtras(-179), dataHoje()],
+  ano:  () => [diasAtras(-364), dataHoje()]
+};
+
+function montarPeriodosDashboard() {
+  const rotulos = { hoje: 'Hoje', d7: '7 dias', d30: '30 dias', mes: 'Mes atual', m6: '6 meses', ano: '1 ano' };
+
+  document.getElementById('dPeriodos').innerHTML = Object.keys(PERIODOS_D)
+    .map(k => `<button data-p="${k}" class="${k === 'd30' ? 'ativa' : ''}">${rotulos[k]}</button>`).join('');
+
+  document.querySelectorAll('#dPeriodos button').forEach(b => {
+    b.onclick = () => {
+      document.querySelectorAll('#dPeriodos button').forEach(x => x.classList.remove('ativa'));
+      b.classList.add('ativa');
+      const [de, ate] = PERIODOS_D[b.dataset.p]();
+      document.getElementById('dDe').value = de;
+      document.getElementById('dAte').value = ate;
+      carregarDashboard();
+    };
+  });
+
+  const [de, ate] = PERIODOS_D.d30();
+  document.getElementById('dDe').value = de;
+  document.getElementById('dAte').value = ate;
+}
+
+function tile(rot, num, sub, classe) {
+  return `<div class="tile ${classe || ''}"><div class="rot">${rot}</div>
+    <div class="num">${num}</div><div class="sub">${sub || '&nbsp;'}</div></div>`;
+}
+
+// Valor sempre escrito ao lado: leitura nao depende de comparar comprimentos.
+function barrasH(el, itens, formatar) {
+  const max = Math.max(1, ...itens.map(i => i.valor));
+
+  el.innerHTML = itens.length
+    ? itens.map(i => `
+      <div class="barra-linha">
+        <span class="barra-nome" title="${i.nome}">${i.nome}</span>
+        <span class="barra-trilho"><span class="barra-fill" style="width:${Math.max(1.5, i.valor * 100 / max)}%"></span></span>
+        <span class="barra-val">${formatar(i.valor)}</span>
+      </div>`).join('')
+    : '<div class="vazio">Sem dados no periodo.</div>';
+}
+
+function dataCurta(d) { const p = String(d).slice(0, 10).split('-'); return `${p[2]}/${p[1]}`; }
+
+// Traco em SVG esticado; ponto, cruz e dica em HTML por cima, senao achatariam.
+function serieTempo(el, pontos) {
+  el.onmousemove = null;
+  el.onmouseleave = null;
+
+  if (!pontos.length || pontos.every(p => p.receitaCentavos === 0)) {
+    el.innerHTML = '<div class="vazio">Sem receita no periodo.</div>';
+    return;
+  }
+
+  const n = pontos.length;
+  const max = Math.max(...pontos.map(p => p.receitaCentavos));
+  const px = i => n === 1 ? 500 : (i / (n - 1)) * 1000;
+  const py = v => 96 - (v / max) * 88;
+
+  const vertices = pontos.map((p, i) => `${px(i).toFixed(1)},${py(p.receitaCentavos).toFixed(1)}`);
+  const area = `M${px(0)},100 L${vertices.join(' L')} L${px(n - 1)},100 Z`;
+
+  el.innerHTML = `
+    <svg viewBox="0 0 1000 100" preserveAspectRatio="none" aria-hidden="true">
+      <line class="grade" x1="0" y1="8" x2="1000" y2="8"/>
+      <line class="grade" x1="0" y1="52" x2="1000" y2="52"/>
+      <line class="grade" x1="0" y1="96" x2="1000" y2="96"/>
+      <path class="area" d="${area}"/>
+      <polyline class="traco" points="${vertices.join(' ')}"/>
+    </svg>
+    <div class="eixo"><span>${dataCurta(pontos[0].data)}</span>
+      <span>pico ${moeda(max)}</span>
+      <span>${dataCurta(pontos[n - 1].data)}</span></div>`;
+
+  const svg = el.querySelector('svg');
+
+  const cruz = document.createElement('div');
+  cruz.style.cssText = 'position:absolute;top:0;width:1px;background:var(--texto-fraco);opacity:.45;pointer-events:none;display:none';
+
+  const ponto = document.createElement('div');
+  ponto.style.cssText = 'position:absolute;width:9px;height:9px;border-radius:50%;background:var(--latao);border:2px solid var(--superficie);pointer-events:none;display:none;transform:translate(-50%,-50%)';
+
+  const dica = document.createElement('div');
+  dica.className = 'dica';
+  dica.style.display = 'none';
+
+  el.append(cruz, ponto, dica);
+
+  el.onmousemove = e => {
+    const r = svg.getBoundingClientRect();
+    const rel = Math.min(Math.max(e.clientX - r.left, 0), r.width);
+    const i = n === 1 ? 0 : Math.round(rel / r.width * (n - 1));
+    const p = pontos[i];
+    const x = n === 1 ? r.width / 2 : (i / (n - 1)) * r.width;
+    const y = (py(p.receitaCentavos) / 100) * r.height;
+
+    cruz.style.display = 'block';
+    cruz.style.left = x + 'px';
+    cruz.style.height = r.height + 'px';
+
+    ponto.style.display = 'block';
+    ponto.style.left = x + 'px';
+    ponto.style.top = y + 'px';
+
+    dica.style.display = 'block';
+    dica.style.left = x + 'px';
+    dica.style.top = (y - 10) + 'px';
+    dica.innerHTML = `${dataCurta(p.data)}<b>${moeda(p.receitaCentavos)}</b>
+      <span class="preco">${p.quantidade} atend.</span>`;
+  };
+
+  el.onmouseleave = () => [cruz, ponto, dica].forEach(x => x.style.display = 'none');
+}
+
+async function carregarDashboard() {
+  const de = document.getElementById('dDe').value;
+  const ate = document.getElementById('dAte').value;
+  if (!de || !ate) return;
+
+  const [d, janelas, prod] = await Promise.all([
+    api(`/api/dashboard?de=${de}&ate=${ate}`),
+    api('/api/dashboard/janelas'),
+    api('/api/dashboard/produtos')
+  ]);
+
+  const r = d.resumo, m = d.medias;
+
+  document.getElementById('dTiles').innerHTML =
+    tile('Receita', moeda(r.receitaCentavos),
+         r.receitaAgendadaCentavos > 0
+           ? `${moeda(r.receitaRealizadaCentavos)} realizado + ${moeda(r.receitaAgendadaCentavos)} agendado`
+           : `${d.periodo.diasAbertos} dias abertos`, 'destaque') +
+    tile('Atendimentos', r.atendimentos,
+         r.atendimentosAgendados > 0
+           ? `${r.atendimentosRealizados} feitos / ${r.atendimentosAgendados} na agenda`
+           : `${m.atendimentosPorDiaAberto} por dia aberto`) +
+    tile('Ticket medio', moeda(r.ticketMedioCentavos), `${r.horasAtendidas}h atendidas`) +
+    tile('Media diaria', moeda(m.porDiaAberto), `semana ${moeda(m.porSemana)}`) +
+    tile('Clientes', r.clientesUnicos, `${r.clientesNovos} novos / ${r.clientesRecorrentes} recorrentes`) +
+    tile('Cancelamento', r.taxaCancelamentoPct + '%', `${r.cancelados} cancelados`,
+         r.taxaCancelamentoPct >= 15 ? 'alerta' : '');
+
+  document.getElementById('dSerieTitulo').textContent =
+    `Receita por dia — ${dataCurta(d.periodo.de)} a ${dataCurta(d.periodo.ate)}`;
+  serieTempo(document.getElementById('dSerie'), d.serie);
+
+  barrasH(document.getElementById('dBarbeiros'),
+    d.porBarbeiro.map(b => ({ nome: b.nome, valor: b.receitaCentavos })), moeda);
+
+  document.getElementById('dBarbeirosTab').innerHTML = d.porBarbeiro.length
+    ? d.porBarbeiro.map(b => `<tr><td>${b.nome}</td><td>${b.atendimentos}</td>
+        <td>${moeda(b.ticketMedioCentavos)}</td><td>${b.ocupacaoPct}%</td></tr>`).join('')
+    : '<tr><td colspan="4" class="vazio">Sem atendimentos.</td></tr>';
+
+  barrasH(document.getElementById('dServicos'),
+    d.porServico.map(s => ({ nome: s.nome, valor: s.quantidade })), v => v + 'x');
+
+  document.getElementById('dServicosTab').innerHTML = d.porServico.length
+    ? d.porServico.map(s => `<tr><td>${s.nome}</td><td>${s.quantidade}</td>
+        <td>${moeda(s.receitaCentavos)}</td><td>${s.participacaoPct}%</td></tr>`).join('')
+    : '<tr><td colspan="4" class="vazio">Sem atendimentos.</td></tr>';
+
+  barrasH(document.getElementById('dDiaSemana'),
+    d.porDiaSemana.map(x => ({ nome: x.dia, valor: x.quantidade })), v => v + ' atend.');
+
+  const horas = d.porHora;
+  document.getElementById('dHorasVazio').classList.toggle('oculto', horas.length > 0);
+  const maxH = Math.max(1, ...horas.map(h => h.quantidade));
+  document.getElementById('dHoras').innerHTML = horas.map(h => `
+    <div class="coluna" title="${h.hora}h — ${h.quantidade} atendimentos">
+      <i style="height:${Math.max(3, h.quantidade * 100 / maxH)}%"></i>
+      <b>${String(h.hora).padStart(2, '0')}</b>
+    </div>`).join('');
+
+  document.getElementById('dClientes').innerHTML = d.topClientes.length
+    ? d.topClientes.map(c => `<tr><td>${c.nome}<br><span class="preco">${c.telefone}</span></td>
+        <td>${c.atendimentos}</td><td>${moeda(c.receitaCentavos)}</td></tr>`).join('')
+    : '<tr><td colspan="3" class="vazio">Sem clientes no periodo.</td></tr>';
+
+  barrasH(document.getElementById('dOrigem'),
+    d.porOrigem.map(o => ({ nome: o.origem === 'Web' ? 'Site' : o.origem, valor: o.quantidade })),
+    v => v + 'x');
+
+  document.getElementById('dJanelas').innerHTML = janelas.map(j =>
+    `<tr><td>${j.rotulo}</td><td>${j.atendimentos}</td><td>${moeda(j.receitaCentavos)}</td>
+     <td>${moeda(j.mediaDiariaCentavos)}</td></tr>`).join('');
+
+  document.getElementById('dProdTag').textContent = `${prod.ativos} ativos de ${prod.total}`;
+  document.getElementById('dProdAviso').textContent =
+    'O sistema nao registra venda de produto, so catalogo e estoque. Faturamento de produto '
+    + 'exige um cadastro de vendas, que ainda nao existe. Valor parado em estoque: '
+    + moeda(prod.valorEmEstoqueCentavos) + '.';
+
+  document.getElementById('dProdutos').innerHTML = prod.itens.length
+    ? prod.itens.map(p => `<tr><td>${p.nome}${p.ativo ? '' : ' <span class="tag erro">inativo</span>'}</td>
+        <td>${p.estoque}</td><td>${moeda(p.precoCentavos)}</td>
+        <td>${moeda(p.valorEstoqueCentavos)}</td></tr>`).join('')
+    : '<tr><td colspan="4" class="vazio">Nenhum produto cadastrado.</td></tr>';
+}
+</script>
+</body>
+</html>
