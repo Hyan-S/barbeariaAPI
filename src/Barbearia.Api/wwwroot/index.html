@@ -3,11 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" id="metaTema" content="#f6f6f8">
 <title>Entrar</title>
 <!-- Antes do CSS: evita piscar branco ao abrir no tema escuro. -->
 <script>document.documentElement.dataset.tema =
   localStorage.getItem('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro');</script>
-<link rel="stylesheet" href="app.css?v=202608091806">
+<link rel="stylesheet" href="app.css?v=202608112122">
 <style>
   /* min-height, nao height: com height fixo o conteudo estoura e o rodape some. */
   body {
@@ -203,14 +204,20 @@
       <div class="campo">
         <label for="email">E-mail</label>
         <div class="entrada">
-          <input id="email" type="email" autocomplete="username" placeholder="voce@barbearia.com" required autofocus>
+          <!-- autocapitalize/autocorrect: no celular o teclado capitaliza a primeira
+               letra e "corrige" o dominio, transformando a credencial digitada. -->
+          <input id="email" type="email" autocomplete="username" inputmode="email"
+                 autocapitalize="none" autocorrect="off" spellcheck="false"
+                 placeholder="voce@barbearia.com" required autofocus>
         </div>
       </div>
 
       <div class="campo">
         <label for="senha">Senha</label>
         <div class="entrada">
-          <input id="senha" type="password" autocomplete="current-password" placeholder="Sua senha" required>
+          <input id="senha" type="password" autocomplete="current-password"
+                 autocapitalize="none" autocorrect="off" spellcheck="false"
+                 placeholder="Sua senha" required>
           <button type="button" class="olho" id="verSenha" aria-label="Mostrar senha">
             <svg id="iconeOlho" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>
@@ -230,7 +237,7 @@
   </div>
 </main>
 
-<script src="app.js?v=202608091806"></script>
+<script src="app.js?v=202608112122"></script>
 <script>
 if (Auth.token) location.replace('painel.html');
 

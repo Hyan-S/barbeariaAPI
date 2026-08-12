@@ -3,10 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" id="metaTema" content="#f6f6f8">
 <title>Trocar senha</title>
 <script>document.documentElement.dataset.tema =
   localStorage.getItem('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro');</script>
-<link rel="stylesheet" href="app.css?v=202608091806">
+<link rel="stylesheet" href="app.css?v=202608112122">
 </head>
 <body>
 <main class="centro">
@@ -21,16 +22,16 @@
     <form id="form">
       <div class="campo">
         <label for="atual">Senha provisoria</label>
-        <input id="atual" type="password" autocomplete="current-password" required>
+        <input id="atual" type="password" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false" required>
       </div>
       <div class="campo">
         <label for="nova">Nova senha</label>
-        <input id="nova" type="password" autocomplete="new-password" required>
+        <input id="nova" type="password" autocomplete="new-password" autocapitalize="none" autocorrect="off" spellcheck="false" required>
         <p class="ajuda">Minimo de 8 caracteres.</p>
       </div>
       <div class="campo">
         <label for="repete">Repita a nova senha</label>
-        <input id="repete" type="password" autocomplete="new-password" required>
+        <input id="repete" type="password" autocomplete="new-password" autocapitalize="none" autocorrect="off" spellcheck="false" required>
       </div>
       <button class="btn" style="width:100%" id="botao">Salvar e entrar</button>
     </form>
@@ -41,7 +42,7 @@
   </div>
 </main>
 
-<script src="app.js?v=202608091806"></script>
+<script src="app.js?v=202608112122"></script>
 <script>
 if (!Auth.token) location.replace('index.html');
 

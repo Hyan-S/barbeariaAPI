@@ -3,10 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" id="metaTema" content="#f6f6f8">
 <title>Agendar horario</title>
 <script>document.documentElement.dataset.tema =
   localStorage.getItem('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro');</script>
-<link rel="stylesheet" href="app.css?v=202608091806">
+<link rel="stylesheet" href="app.css?v=202608112122">
 <style>
   main { max-width: 580px; }
   .trilha { display: flex; align-items: center; gap: 6px; margin-bottom: 22px; }
@@ -184,7 +185,7 @@
   </div>
 </main>
 
-<script src="app.js?v=202608091806"></script>
+<script src="app.js?v=202608112122"></script>
 <script>
 const msg = document.getElementById('msg');
 const token = new URLSearchParams(location.search).get('t');

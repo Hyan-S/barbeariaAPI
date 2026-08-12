@@ -8,6 +8,10 @@ const Tema = {
   aplicar(tema) {
     document.documentElement.dataset.tema = tema;
     localStorage.setItem('tema', tema);
+    // Barra do navegador no celular acompanha o tema; sem isto ela fica branca
+    // por cima de uma pagina escura.
+    const meta = document.getElementById('metaTema');
+    if (meta) meta.content = tema === 'escuro' ? '#0f1116' : '#f6f6f8';
     document.querySelectorAll('[data-icone-tema]').forEach(el => {
       el.innerHTML = tema === 'escuro' ? Tema.iconeSol : Tema.iconeLua;
     });
@@ -15,7 +19,11 @@ const Tema = {
 
   alternar() { this.aplicar(this.atual === 'escuro' ? 'claro' : 'escuro'); },
 
-  iniciar() { document.documentElement.dataset.tema = this.atual; },
+  iniciar() {
+    document.documentElement.dataset.tema = this.atual;
+    const meta = document.getElementById('metaTema');
+    if (meta) meta.content = this.atual === 'escuro' ? '#0f1116' : '#f6f6f8';
+  },
 
   iconeLua: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg>',
   iconeSol: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>'
