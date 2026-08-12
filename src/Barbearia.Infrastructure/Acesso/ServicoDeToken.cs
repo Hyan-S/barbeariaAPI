@@ -4,6 +4,7 @@ using System.Text;
 using Barbearia.Application.Acesso;
 using Barbearia.Application.Configuracao;
 using Barbearia.Domain.Entities;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
@@ -50,16 +51,32 @@ public class ServicoDeToken(IOptions<JwtOptions> options) : IServicoDeToken
     }
 }
 
-public class HashDeSenha : IHashDeSenha
+public class HashDeSenha(IConfiguration config) : IHashDeSenha
 {
-    // ~250ms por hash: caro para forca bruta, aceitavel num login de painel.
-    private const int WorkFactor = 12;
+    // Cada ponto dobra o custo. 12 leva ~250ms num PC comum, mas o plano free do
+    // Render da 0,1 de CPU e o mesmo calculo passa de 2s — o usuario sente o login
+    // travar. 10 e o minimo recomendado pela OWASP e cai para ~0,5s aqui; com o
+    // rate limit de 8 tentativas por minuto, a forca bruta continua inviavel.
+    // Suba de novo (Seguranca__BcryptWorkFactor) se um dia sair do plano free.
+    private readonly int _custo = Faixa(config.GetValue("Seguranca:BcryptWorkFactor", 10));
 
-    public string Gerar(string senha) => BCrypt.Net.BCrypt.HashPassword(senha, WorkFactor);
+    public int Custo => _custo;
+
+    public string Gerar(string senha) => BCrypt.Net.BCrypt.HashPassword(senha, _custo);
 
     public bool Conferir(string senha, string hash)
     {
         try { return BCrypt.Net.BCrypt.Verify(senha, hash); }
         catch (BCrypt.Net.SaltParseException) { return false; }
     }
+
+    /// <summary>Hash antigo, gerado com custo diferente do atual.</summary>
+    public bool PrecisaRegerar(string hash)
+    {
+        // Formato: $2a$<custo>$<salt+hash>
+        var partes = hash.Split('$');
+        return partes.Length < 4 || !int.TryParse(partes[2], out var custo) || custo != _custo;
+    }
+
+    private static int Faixa(int valor) => valor < 8 ? 8 : valor > 15 ? 15 : valor;
 }

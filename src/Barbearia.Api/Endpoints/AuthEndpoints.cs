@@ -26,6 +26,15 @@ public static class AuthEndpoints
             if (usuario is null || !hash.Conferir(req.Senha ?? "", usuario.SenhaHash))
                 return Results.Json(new { erro = "E-mail ou senha invalidos" }, statusCode: 401);
 
+            // Hash gravado com custo antigo continua caro para conferir em todo login.
+            // Como a senha em texto so existe aqui, este e o unico ponto onde da para
+            // reescrever o hash com o custo atual — acontece uma vez por conta.
+            if (hash.PrecisaRegerar(usuario.SenhaHash))
+            {
+                usuario.SenhaHash = hash.Gerar(req.Senha!);
+                await db.SaveChangesAsync();
+            }
+
             return Results.Ok(new
             {
                 token = tokens.GerarParaBarbeiro(usuario),
