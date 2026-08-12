@@ -3,10 +3,6 @@ using System.Text;
 
 namespace Barbearia.Infrastructure.WhatsApp;
 
-/// <summary>
-/// Sem esta conferencia o webhook aceitaria qualquer JSON, e daria para forjar
-/// mensagem de qualquer numero.
-/// </summary>
 public static class ValidadorAssinatura
 {
     public static bool Conferir(ReadOnlySpan<byte> corpoBruto, string? headerAssinatura, string appSecret)

@@ -14,7 +14,6 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// O Render injeta a porta via PORT.
 var porta = Environment.GetEnvironmentVariable("PORT");
 if (!string.IsNullOrWhiteSpace(porta))
     builder.WebHost.UseUrls($"http://0.0.0.0:{porta}");
@@ -32,9 +31,6 @@ var jwtSecret = builder.Configuration["Jwt:Secret"]
 if (jwtSecret.Length < 32)
     throw new InvalidOperationException("Jwt:Secret precisa de no minimo 32 caracteres");
 
-// Em producao, recusar subir com config de exemplo: segredo conhecido = token de admin forjavel.
-// Todos os problemas sao reunidos numa mensagem so — descobrir um por deploy custa
-// um ciclo de build inteiro por erro.
 if (!builder.Environment.IsDevelopment())
 {
     var conexao = builder.Configuration.GetConnectionString("Postgres") ?? "";
@@ -43,9 +39,6 @@ if (!builder.Environment.IsDevelopment())
     if (jwtSecret.Contains("troque-esta-chave"))
         problemas.Add("Jwt__Secret ainda e o valor de exemplo. Use 32+ caracteres aleatorios.");
 
-    // Quebra de linha ou caractere de moldura significa que o valor foi copiado de
-    // dentro de uma tabela renderizada no terminal, trazendo as bordas junto. O erro
-    // do Npgsql para esse caso e ilegivel ("Couldn't set username |").
     var sujeira = conexao.Where(c => c is '\n' or '\r' or '\t' || c > '~').Distinct().ToArray();
 
     if (string.IsNullOrWhiteSpace(conexao))
@@ -69,8 +62,6 @@ if (!builder.Environment.IsDevelopment())
 
     if (problemas.Count > 0)
     {
-        // "definida" so quando veio do ambiente: cair no appsettings.json e o mesmo
-        // que nao ter configurado, porque la esta o valor de exemplo.
         static string Situacao(string variavel)
         {
             var v = Environment.GetEnvironmentVariable(variavel);
@@ -98,7 +89,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     {
         opt.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
 
-        // Token usa "role"/"name" curtos; sem o mapa, IsInRole procura por "role".
         opt.MapInboundClaims = false;
 
         opt.TokenValidationParameters = new TokenValidationParameters
@@ -117,7 +107,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-// Login e agendamento anonimo sao os alvos de forca-bruta e spam; limitados por IP.
 builder.Services.AddRateLimiter(o =>
 {
     o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -134,14 +123,12 @@ builder.Services.AddRateLimiter(o =>
         ctx.Connection.RemoteIpAddress?.ToString() ?? "desconhecido";
 });
 
-// Senha provisoria pendente bloqueia tudo, menos a propria troca de senha.
 static bool SenhaOk(System.Security.Claims.ClaimsPrincipal u) =>
     !u.HasClaim("trocar_senha", "1");
 
 static bool EhAdmin(System.Security.Claims.ClaimsPrincipal u) =>
     u.IsInRole(nameof(Perfil.Admin));
 
-// Admin e Gestor mandam em tudo; as permissoes granulares valem para o Barbeiro.
 static bool Permitido(System.Security.Claims.ClaimsPrincipal u, string permissao) =>
     SenhaOk(u) && (EhAdmin(u)
                    || u.IsInRole(nameof(Perfil.Gestor))
@@ -156,11 +143,9 @@ builder.Services.AddAuthorizationBuilder()
     .AddPolicy("Servicos", p => p.RequireAssertion(c => Permitido(c.User, "servicos")))
     .AddPolicy("Produtos", p => p.RequireAssertion(c => Permitido(c.User, "produtos")))
     .AddPolicy("Clientes", p => p.RequireAssertion(c => Permitido(c.User, "clientes")))
-    // Faturamento nao segue a regra do Gestor: mesmo ele so ve se o admin liberar.
     .AddPolicy("Dashboard", p => p.RequireAssertion(c =>
         SenhaOk(c.User) && (EhAdmin(c.User) || c.User.HasClaim("perm", "dashboard"))));
 
-// Origem restrita a lista; sem AllowCredentials porque o token vai no header, nao em cookie.
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p
     .WithOrigins(builder.Configuration["App:OrigensPermitidas"]?.Split(',',
         StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
@@ -168,7 +153,6 @@ builder.Services.AddCors(o => o.AddDefaultPolicy(p => p
     .WithHeaders("Authorization", "Content-Type")
     .WithMethods("GET", "POST", "PUT", "DELETE")));
 
-// No Render o TLS termina no proxy: confia no X-Forwarded-* para o app enxergar HTTPS.
 builder.Services.Configure<ForwardedHeadersOptions>(o =>
 {
     o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
@@ -187,7 +171,6 @@ using (var scope = app.Services.CreateScope())
     await Seed.ExecutarAsync(db);
 }
 
-// Cabecalhos de seguranca em toda resposta; CSP so permite os proprios assets e origem.
 app.Use(async (ctx, next) =>
 {
     var h = ctx.Response.Headers;
@@ -200,7 +183,6 @@ app.Use(async (ctx, next) =>
     await next();
 });
 
-// Swagger descreve a superficie inteira da API: util em dev, mapa para invasor em prod.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -208,9 +190,6 @@ if (app.Environment.IsDevelopment())
 }
 else
 {
-    // /health fica fora do redirect: o health check do Render chega pela rede interna,
-    // sem X-Forwarded-Proto, e receberia 307 em vez de 200 — o deploy entraria em
-    // loop de "unhealthy". O endpoint nao expoe nada sensivel.
     app.UseWhen(ctx => !ctx.Request.Path.StartsWithSegments("/health"), ramo =>
     {
         ramo.UseHsts();

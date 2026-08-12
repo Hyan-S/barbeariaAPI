@@ -7,7 +7,6 @@ namespace Barbearia.Api.Endpoints;
 
 public static class DashboardEndpoints
 {
-    // Teto de linhas; ao estourar a resposta sinaliza truncado em vez de mentir o total.
     private const int Teto = 20000;
 
     private static readonly string[] DiasSemana =
@@ -40,8 +39,6 @@ public static class DashboardEndpoints
             var receita = ativos.Sum(a => (long)a.PrecoCentavos);
             var minutos = ativos.Sum(a => (long)(a.FimUtc - a.InicioUtc).TotalMinutes);
 
-            // Periodo que avanca no futuro mistura caixa realizado com agenda vendida.
-            // Separar evita ler "receita do mes" como dinheiro que ja entrou.
             var agora = DateTime.UtcNow;
             var realizada = ativos.Where(a => a.InicioUtc <= agora).ToList();
             var agendada = ativos.Where(a => a.InicioUtc > agora).ToList();
@@ -176,7 +173,6 @@ public static class DashboardEndpoints
             });
         });
 
-        // Janelas fixas terminando hoje, independentes do filtro da tela.
         g.MapGet("/janelas", async (AppDbContext db) =>
         {
             var hoje = Fuso.HojeLocal();
@@ -208,8 +204,6 @@ public static class DashboardEndpoints
             }));
         });
 
-        // Produtos entram como catalogo e estoque: nao existe registro de venda no
-        // sistema, entao faturamento de produto nao tem como ser calculado.
         g.MapGet("/produtos", async (AppDbContext db) =>
         {
             var produtos = await db.Produtos.AsNoTracking().ToListAsync();
@@ -236,10 +230,6 @@ public static class DashboardEndpoints
     private static double Pct(long parte, long total) =>
         total <= 0 ? 0 : Math.Round(parte * 100d / total, 1);
 
-    /// <summary>
-    /// Quanto do expediente do profissional virou atendimento. Bloqueios nao entram
-    /// na conta, entao ferias e folgas pontuais derrubam o numero.
-    /// </summary>
     private static double Ocupacao(long minutosAtendidos, List<Expediente> doBarbeiro,
         DateOnly inicio, int diasCorridos)
     {

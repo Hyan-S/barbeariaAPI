@@ -1,6 +1,5 @@
 namespace Barbearia.Domain.Entities;
 
-/// <summary>Folga, feriado, medico. Recorta o expediente sem virar agendamento.</summary>
 public class Bloqueio
 {
     public Guid Id { get; set; } = Guid.NewGuid();

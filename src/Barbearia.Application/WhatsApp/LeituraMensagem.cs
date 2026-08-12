@@ -22,13 +22,10 @@ public enum PeriodoDia
 
 public enum Confianca
 {
-    /// <summary>Nao deu para entender. Manda o link, nao chuta.</summary>
     Baixa,
 
-    /// <summary>Entendeu o dia ou o periodo, mas nao a hora exata.</summary>
     Media,
 
-    /// <summary>Dia e hora explicitos. Pode propor o horario direto.</summary>
     Alta
 }
 

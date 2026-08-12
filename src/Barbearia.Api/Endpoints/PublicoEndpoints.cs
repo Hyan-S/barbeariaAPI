@@ -34,7 +34,6 @@ public static class PublicoEndpoints
                 .Select(b => new { b.Id, b.Nome })
                 .ToListAsync());
 
-        // Equipe do servico; sem vinculo cadastrado, devolve todos os que atendem.
         g.MapGet("/servicos/{id:guid}/barbeiros", async (Guid id, AppDbContext db) =>
         {
             var habilitados = await db.BarbeiroServicos.AsNoTracking()
@@ -51,7 +50,6 @@ public static class PublicoEndpoints
                 .ToListAsync());
         });
 
-        // grade=true devolve o dia inteiro marcando o que ja esta ocupado.
         g.MapGet("/disponibilidade", async (
             DateOnly data, Guid servicoId, Guid? barbeiroId, bool? grade,
             DisponibilidadeService servico) =>
@@ -98,7 +96,6 @@ public static class PublicoEndpoints
         g.MapPost("/agendamentos", async (
             NovoAgendamento req, AgendamentoService servico, MagicLinkService links, AppDbContext db) =>
         {
-            // Duas entradas: magic link do WhatsApp ou telefone digitado na tela.
             Domain.Entities.Cliente? cliente = null;
 
             if (!string.IsNullOrWhiteSpace(req.Token))

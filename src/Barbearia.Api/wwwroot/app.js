@@ -1,4 +1,3 @@
-// Sem escolha salva, segue o tema do sistema.
 const Tema = {
   get atual() {
     return localStorage.getItem('tema')
@@ -8,8 +7,6 @@ const Tema = {
   aplicar(tema) {
     document.documentElement.dataset.tema = tema;
     localStorage.setItem('tema', tema);
-    // Barra do navegador no celular acompanha o tema; sem isto ela fica branca
-    // por cima de uma pagina escura.
     const meta = document.getElementById('metaTema');
     if (meta) meta.content = tema === 'escuro' ? '#0f1116' : '#f6f6f8';
     document.querySelectorAll('[data-icone-tema]').forEach(el => {
@@ -60,18 +57,15 @@ const Auth = {
 
   get ehAdmin() { return this.perfil === 'Admin'; },
 
-  // Admin tem acesso total.
   pode(perfisPermitidos) {
     return this.ehAdmin || perfisPermitidos.includes(this.perfil);
   },
-  // Admin e Gestor acessam tudo; as permissoes granulares valem para Barbeiro.
   permite(chave) {
     return this.ehAdmin || this.perfil === 'Gestor' || this.permissoes[chave] === true;
   },
 
   exigirLogin() {
     if (!this.token) { location.href = 'index.html'; return false; }
-    // O backend bloqueia tudo nesse estado, entao nem carrega a tela.
     if (this.precisaTrocarSenha && !location.pathname.endsWith('senha.html')) {
       location.href = 'senha.html';
       return false;
@@ -80,26 +74,175 @@ const Auth = {
   }
 };
 
+
+
+const ROTULOS = [
+  ['POST',   /^\/api\/auth\/login$/,                            'Entrando',                   'Tudo certo'],
+  ['POST',   /^\/api\/auth\/trocar-senha$/,                     'Trocando a senha',           'Senha trocada'],
+  ['GET',    /^\/api\/me$/,                                     'Verificando a sessao',       'Sessao ativa'],
+
+  ['GET',    /^\/api\/config$/,                                 'Carregando a barbearia',     'Barbearia carregada'],
+  ['GET',    /^\/api\/sessao$/,                                 'Abrindo o seu link',         'Link aberto'],
+  ['GET',    /^\/api\/servicos\/[^/]+\/barbeiros$/,             'Vendo quem atende',          'Barbeiros carregados'],
+  ['GET',    /^\/api\/servicos$/,                               'Carregando servicos',        'Servicos carregados'],
+  ['GET',    /^\/api\/barbeiros$/,                              'Carregando barbeiros',       'Barbeiros carregados'],
+  ['GET',    /^\/api\/disponibilidade$/,                        'Buscando horarios livres',   'Horarios carregados'],
+
+  ['POST',   /^\/api\/agendamentos\/[^/]+\/cancelar$/,          'Cancelando o horario',       'Horario cancelado'],
+  ['POST',   /^\/api\/agendamentos$/,                           'Confirmando o seu horario',  'Horario confirmado'],
+  ['GET',    /^\/api\/agendamentos$/,                           'Carregando os seus horarios','Horarios carregados'],
+
+  ['GET',    /^\/api\/gestor\/agenda$/,                         'Carregando a agenda',        'Agenda carregada'],
+  ['GET',    /^\/api\/gestor\/agendamentos\/[^/]+\/grade$/,     'Buscando horarios livres',   'Horarios carregados'],
+  ['POST',   /^\/api\/gestor\/agendamentos\/[^/]+\/cancelar$/,  'Cancelando o agendamento',   'Agendamento cancelado'],
+  ['POST',   /^\/api\/gestor\/agendamentos\/[^/]+\/reagendar$/, 'Reagendando',                'Horario remarcado'],
+  ['POST',   /^\/api\/gestor\/agendamentos$/,                   'Agendando',                  'Agendamento criado'],
+  ['GET',    /^\/api\/gestor\/barbeiros$/,                      'Carregando barbeiros',       'Barbeiros carregados'],
+  ['GET',    /^\/api\/gestor\/servicos$/,                       'Carregando servicos',        'Servicos carregados'],
+  ['POST',   /^\/api\/gestor\/servicos$/,                       'Salvando o servico',         'Servico salvo'],
+  ['PUT',    /^\/api\/gestor\/servicos\/[^/]+$/,                'Salvando o servico',         'Servico salvo'],
+  ['GET',    /^\/api\/gestor\/expedientes$/,                    'Carregando o funcionamento', 'Funcionamento carregado'],
+  ['POST',   /^\/api\/gestor\/expedientes$/,                    'Salvando o horario',         'Horario salvo'],
+  ['DELETE', /^\/api\/gestor\/expedientes\/[^/]+$/,             'Removendo o horario',        'Horario removido'],
+  ['GET',    /^\/api\/gestor\/bloqueios$/,                      'Carregando bloqueios',       'Bloqueios carregados'],
+  ['POST',   /^\/api\/gestor\/bloqueios$/,                      'Salvando o bloqueio',        'Bloqueio salvo'],
+  ['DELETE', /^\/api\/gestor\/bloqueios\/[^/]+$/,               'Removendo o bloqueio',       'Bloqueio removido'],
+
+  ['GET',    /^\/api\/produtos$/,                               'Carregando produtos',        'Produtos carregados'],
+  ['POST',   /^\/api\/produtos$/,                               'Salvando o produto',         'Produto salvo'],
+  ['PUT',    /^\/api\/produtos\/[^/]+$/,                        'Salvando o produto',         'Produto salvo'],
+  ['DELETE', /^\/api\/produtos\/[^/]+$/,                        'Removendo o produto',        'Produto removido'],
+
+  ['GET',    /^\/api\/clientes$/,                               'Carregando clientes',        'Clientes carregados'],
+  ['GET',    /^\/api\/clientes\/[^/]+$/,                        'Abrindo o cliente',          'Cliente aberto'],
+  ['PUT',    /^\/api\/clientes\/[^/]+$/,                        'Salvando o cliente',         'Cliente salvo'],
+
+  ['GET',    /^\/api\/dashboard/,                               'Montando o dashboard',       'Dashboard pronto'],
+
+  ['GET',    /^\/api\/admin\/config$/,                          'Carregando a configuracao',  'Configuracao carregada'],
+  ['PUT',    /^\/api\/admin\/config$/,                          'Salvando a configuracao',    'Configuracao salva'],
+  ['GET',    /^\/api\/admin\/sistema$/,                         'Consultando o sistema',      'Diagnostico pronto'],
+  ['GET',    /^\/api\/admin\/usuarios$/,                        'Carregando funcionarios',    'Funcionarios carregados'],
+  ['POST',   /^\/api\/admin\/usuarios$/,                        'Cadastrando o funcionario',  'Funcionario cadastrado'],
+  ['PUT',    /^\/api\/admin\/usuarios\/[^/]+$/,                 'Salvando o funcionario',     'Funcionario salvo'],
+  ['GET',    /^\/api\/admin\/pessoas$/,                         'Carregando pessoas',         'Pessoas carregadas'],
+  ['GET',    /^\/api\/admin\/permissoes$/,                      'Carregando permissoes',      'Permissoes carregadas'],
+  ['POST',   /^\/api\/admin\/permissoes$/,                      'Salvando a permissao',       'Permissao salva'],
+  ['POST',   /^\/api\/admin\/whatsapp\/teste$/,                 'Enviando o teste',           'Mensagem enviada']
+];
+
+function rotuloDaRota(caminho, metodo) {
+  const rota = caminho.split('?')[0];
+
+  for (const [m, padrao, fazendo, feito] of ROTULOS)
+    if (m === metodo && padrao.test(rota)) return { fazendo, feito };
+
+  return { fazendo: 'Carregando', feito: 'Pronto' };
+}
+
+const GIRO = '<span class="rede-giro"></span>';
+const CERTO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
+const ERRADO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16v.01"/></svg>';
+
+const Rede = {
+  ativas: 0,
+  fazendo: 'Carregando',
+  timer: null,
+  _caixa: null,
+
+  get caixa() {
+    if (!this._caixa) {
+      this._caixa = document.createElement('div');
+      this._caixa.className = 'rede';
+      this._caixa.setAttribute('role', 'status');
+      this._caixa.setAttribute('aria-live', 'polite');
+      document.body.appendChild(this._caixa);
+    }
+    return this._caixa;
+  },
+
+  pintar(tipo, texto, icone) {
+    clearTimeout(this.timer);
+    this.caixa.className = 'rede visivel ' + tipo;
+    this.caixa.innerHTML = icone + '<span>' + texto + '</span>';
+  },
+
+  carregando() {
+    const extra = this.ativas > 1 ? ` (+${this.ativas - 1})` : '';
+    this.pintar('carrega', this.fazendo + '...' + extra, GIRO);
+  },
+
+  comecou(fazendo) {
+    this.ativas++;
+    this.fazendo = fazendo;
+    this.carregando();
+  },
+
+  terminou(tipo, texto) {
+    this.ativas = Math.max(0, this.ativas - 1);
+
+    if (tipo === 'ok' && this.ativas > 0) { this.carregando(); return; }
+
+    this.pintar(tipo, texto, tipo === 'ok' ? CERTO : ERRADO);
+
+    this.timer = setTimeout(() => {
+      if (this.ativas > 0) this.carregando();
+      else this.caixa.className = 'rede';
+    }, 3000);
+  }
+};
+
 async function api(caminho, opcoes = {}) {
+  const metodo = (opcoes.method || 'GET').toUpperCase();
+  const rotulo = rotuloDaRota(caminho, metodo);
+  Rede.comecou(rotulo.fazendo);
+
   const cabecalhos = { 'Content-Type': 'application/json', ...(opcoes.headers || {}) };
   if (Auth.token) cabecalhos['Authorization'] = 'Bearer ' + Auth.token;
 
-  const resposta = await fetch(caminho, { ...opcoes, headers: cabecalhos });
+  let resposta;
+  try {
+    resposta = await fetch(caminho, { ...opcoes, headers: cabecalhos });
+  } catch {
+    Rede.terminou('erro', 'Sem conexao com o servidor');
+    throw new Error('Sem conexao com o servidor');
+  }
 
-  if (resposta.status === 401 && Auth.token) { Auth.sair(); throw new Error('Sessao expirada'); }
+  if (resposta.status === 401 && Auth.token) {
+    Rede.terminou('erro', 'Sessao expirada');
+    Auth.sair();
+    throw new Error('Sessao expirada');
+  }
 
   const texto = await resposta.text();
-  const corpo = texto ? JSON.parse(texto) : null;
 
-  if (!resposta.ok) throw Object.assign(new Error(corpo?.erro || 'Erro inesperado'), { corpo, status: resposta.status });
+  let corpo = null;
+  try { corpo = texto ? JSON.parse(texto) : null; } catch { corpo = null; }
 
+  if (!resposta.ok) {
+    const mensagem = corpo?.erro
+      || (resposta.status === 429 ? 'Muitas tentativas. Espere um minuto.'
+      : resposta.status >= 502 ? 'Servidor iniciando. Tente de novo em alguns segundos.'
+      : 'Erro inesperado');
+
+    Rede.terminou('erro', mensagem);
+    throw Object.assign(new Error(mensagem), { corpo, status: resposta.status });
+  }
+
+  Rede.terminou('ok', rotulo.feito);
   return corpo;
 }
 
 function aviso(elemento, mensagem, tipo = 'erro') {
+  clearTimeout(elemento._timer);
+
   if (!mensagem) { elemento.className = 'oculto'; return; }
+
   elemento.className = 'aviso ' + tipo;
   elemento.textContent = mensagem;
+
+  if (tipo !== 'erro')
+    elemento._timer = setTimeout(() => { elemento.className = 'oculto'; }, 3000);
 }
 
 function moeda(centavos) {
@@ -151,7 +294,9 @@ const ICONES = {
   clientes: '<path d="M20 20v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>',
   pessoas: '<path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>',
   config: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-2.9 1.2V21a2 2 0 11-4 0v-.1A1.7 1.7 0 007 19.4a1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00-1.2-2.9H1a2 2 0 110-4h.1A1.7 1.7 0 004.6 7a1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3H9a1.7 1.7 0 001-1.5V1a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9V9a1.7 1.7 0 001.5 1H23a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/>',
-  sistema: '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>'
+  sistema: '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
+  dashboard: '<path d="M3 3v18h18"/><path d="M7 16v-5M12 16V7M17 16v-8"/>',
+  permissoes: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/>'
 };
 
 function icone(nome) {
@@ -159,10 +304,6 @@ function icone(nome) {
     stroke-linecap="round" stroke-linejoin="round">${ICONES[nome] || ''}</svg>`;
 }
 
-/**
- * Monta o menu lateral. grupos: [{ titulo, itens: [{ chave, nome, perfis?, permissao? }] }].
- * Renderiza so o que o perfil e as permissoes do usuario liberam.
- */
 function menuLateral(container, grupos, aoTrocar) {
   const podeVer = i =>
     (i.permissao ? Auth.permite(i.permissao) : true) &&
@@ -196,7 +337,6 @@ function menuLateral(container, grupos, aoTrocar) {
     b.onclick = () => mostrar(b.dataset.chave);
   });
 
-  // Todas as secoes que o usuario nao pode ver ficam escondidas.
   grupos.flatMap(g => g.itens).forEach(i => {
     const secao = document.getElementById('secao-' + i.chave);
     if (secao) secao.classList.toggle('oculto', i.chave !== visiveis[0].chave);

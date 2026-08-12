@@ -13,7 +13,6 @@ public static class GestorEndpoints
     public record ServicoRequest(
         string Nome, int DuracaoMinutos, int PrecoCentavos, bool Ativo, Guid[]? BarbeiroIds);
 
-    /// <summary>Lista vazia significa "todos atendem", entao nada e gravado nesse caso.</summary>
     private static async Task VincularAsync(AppDbContext db, Guid servicoId, Guid[]? barbeiroIds)
     {
         if (barbeiroIds is null || barbeiroIds.Length == 0) return;
@@ -39,10 +38,8 @@ public static class GestorEndpoints
     {
         var g = app.MapGroup("/api/gestor").RequireAuthorization("Gestao");
 
-        // Agenda: qualquer perfil logado no painel.
         var painel = app.MapGroup("/api/gestor").RequireAuthorization("Painel");
 
-        // Teto no banco vem antes do filtro de hora, que roda em memoria.
         const int TetoBusca = 3000;
         const int TetoExibicao = 500;
 
@@ -125,7 +122,6 @@ public static class GestorEndpoints
             });
         });
 
-        // Grade para escolher o novo horario, com o proprio agendamento fora da conta.
         painel.MapGet("/agendamentos/{id:guid}/grade", async (
             Guid id, DateOnly data, AppDbContext db, DisponibilidadeService disponibilidade) =>
         {
@@ -186,7 +182,6 @@ public static class GestorEndpoints
         painel.MapPost("/agendamentos/{id:guid}/cancelar", async (Guid id, AgendamentoService servico) =>
             await servico.CancelarAsync(id, null, false) ? Results.Ok() : Results.NotFound());
 
-        // A barbearia agendando pelo balcao, por telefone ou para encaixe.
         painel.MapPost("/agendamentos", async (
             AgendamentoPeloPainel req, AgendamentoService servico, AppDbContext db) =>
         {
@@ -244,14 +239,12 @@ public static class GestorEndpoints
                 .Select(b => new { b.Id, b.Nome })
                 .ToListAsync());
 
-        // Servicos tem permissao propria, concedida pelo admin.
         var servicos = app.MapGroup("/api/gestor").RequireAuthorization("Servicos");
 
         servicos.MapGet("/servicos", async (AppDbContext db) =>
         {
             var vinculos = await db.BarbeiroServicos.AsNoTracking().ToListAsync();
 
-            // Materializa antes de cruzar: o EF nao traduz lista em memoria na projecao.
             var lista = await db.Servicos.AsNoTracking().OrderBy(s => s.Nome).ToListAsync();
 
             return Results.Ok(lista.Select(s => new

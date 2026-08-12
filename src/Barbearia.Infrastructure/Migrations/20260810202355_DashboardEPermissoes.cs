@@ -4,10 +4,8 @@
 
 namespace Barbearia.Infrastructure.Migrations
 {
-    /// <inheritdoc />
     public partial class DashboardEPermissoes : Migration
     {
-        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AddColumn<bool>(
@@ -24,8 +22,6 @@ namespace Barbearia.Infrastructure.Migrations
                 nullable: false,
                 defaultValue: 0);
 
-            // Agendamentos antigos nasceriam com receita zero e sumiriam do dashboard.
-            // O preco atual do servico e a melhor aproximacao disponivel para eles.
             migrationBuilder.Sql("""
                 UPDATE agendamentos a
                 SET "PrecoCentavos" = s."PrecoCentavos"
@@ -34,7 +30,6 @@ namespace Barbearia.Infrastructure.Migrations
                 """);
         }
 
-        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(

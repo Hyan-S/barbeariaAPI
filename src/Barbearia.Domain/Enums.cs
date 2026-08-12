@@ -15,10 +15,6 @@ public enum OrigemAgendamento
     Painel = 2
 }
 
-/// <summary>
-/// Admin: dono do sistema, mexe em integracao e cria contas.
-/// Gestor: dono da barbearia. Barbeiro: so a propria agenda.
-/// </summary>
 public enum Perfil
 {
     Admin = 0,

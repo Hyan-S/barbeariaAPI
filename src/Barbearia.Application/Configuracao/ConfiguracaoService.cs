@@ -3,10 +3,6 @@ using Microsoft.Extensions.Options;
 
 namespace Barbearia.Application.Configuracao;
 
-/// <summary>
-/// Configuracao vinda do banco (editavel na tela do admin) com fallback para as
-/// variaveis de ambiente. O banco vence quando preenchido.
-/// </summary>
 public class ConfiguracaoService(
     IAppDbContext db,
     IOptions<WhatsAppOptions> envWhatsApp,
@@ -91,7 +87,6 @@ public class ConfiguracaoService(
         return Ler(mapa, BarbeariaNome) ?? "Barbearia";
     }
 
-    /// <summary>Para a tela do admin: segredo vira apenas "preenchido: sim/nao".</summary>
     public async Task<Dictionary<string, object>> ObterParaTelaAsync(CancellationToken ct = default)
     {
         var whatsapp = await ObterWhatsAppAsync(ct);
@@ -121,7 +116,6 @@ public class ConfiguracaoService(
         };
     }
 
-    /// <summary>Chave com valor vazio e ignorada: nao apaga segredo sem querer.</summary>
     public async Task SalvarAsync(IDictionary<string, string?> valores, CancellationToken ct = default)
     {
         var existentes = await db.Configuracoes.ToDictionaryAsync(x => x.Chave, ct);
@@ -156,7 +150,6 @@ public class ConfiguracaoService(
     private static string? Ler(Dictionary<string, string> mapa, string chave) =>
         mapa.TryGetValue(chave, out var v) && !string.IsNullOrWhiteSpace(v) ? v : null;
 
-    /// <summary>Valor fora da faixa cai no padrao — evita 0 minutos de slot travar a agenda.</summary>
     private static int Inteiro(Dictionary<string, string> mapa, string chave, int padrao, int min, int max)
     {
         if (Ler(mapa, chave) is not { } bruto || !int.TryParse(bruto, out var valor)) return padrao;

@@ -6,29 +6,17 @@ using Microsoft.Extensions.Options;
 
 namespace Barbearia.Application.Disponibilidade;
 
-/// <summary>
-/// Disponivel = expediente do dia - agendamentos ativos - bloqueios - passado.
-/// </summary>
 public class DisponibilidadeService(IAppDbContext db, ConfiguracaoService configuracao)
 {
-    /// <summary>Só os livres. <paramref name="barbeiroId"/> nulo = qualquer barbeiro.</summary>
     public Task<IReadOnlyList<Slot>> ObterDoDiaAsync(
         DateOnly diaLocal, Guid servicoId, Guid? barbeiroId = null, CancellationToken ct = default) =>
         CalcularAsync(diaLocal, servicoId, barbeiroId, false, null, ct);
 
-    /// <summary>
-    /// Grade para reagendamento: o proprio agendamento sai da conta, senao mover
-    /// das 14h para 14h15 conflitaria com ele mesmo.
-    /// </summary>
     public Task<IReadOnlyList<Slot>> ObterGradeParaMoverAsync(
         DateOnly diaLocal, Guid servicoId, Guid ignorar, Guid? barbeiroId = null,
         CancellationToken ct = default) =>
         CalcularAsync(diaLocal, servicoId, barbeiroId, true, ignorar, ct);
 
-    /// <summary>
-    /// Dia inteiro marcando livre/ocupado. O cliente ve que a barbearia atende ate
-    /// as 19h e que as 15h ja foi, em vez de so ver um buraco na lista.
-    /// </summary>
     public Task<IReadOnlyList<Slot>> ObterGradeDoDiaAsync(
         DateOnly diaLocal, Guid servicoId, Guid? barbeiroId = null, CancellationToken ct = default) =>
         CalcularAsync(diaLocal, servicoId, barbeiroId, true, null, ct);
@@ -49,7 +37,6 @@ public class DisponibilidadeService(IAppDbContext db, ConfiguracaoService config
 
         if (servico is null) return [];
 
-        // Servico sem vinculo cadastrado e atendido por todos os barbeiros ativos.
         var habilitados = await db.BarbeiroServicos
             .AsNoTracking()
             .Where(x => x.ServicoId == servicoId)
@@ -142,11 +129,6 @@ public class DisponibilidadeService(IAppDbContext db, ConfiguracaoService config
         return slots.FirstOrDefault();
     }
 
-    /// <summary>
-    /// Todos os profissionais livres naquele horario exato. Quando o cliente aceita
-    /// "qualquer um", o agendamento tenta o proximo da lista se o primeiro for
-    /// tomado entre o calculo e o INSERT.
-    /// </summary>
     public async Task<IReadOnlyList<Slot>> ObterTodosLivresAsync(
         DateTime inicioUtc,
         Guid servicoId,
@@ -158,7 +140,6 @@ public class DisponibilidadeService(IAppDbContext db, ConfiguracaoService config
         return slots.Where(s => s.InicioUtc == inicioUtc).ToList();
     }
 
-    /// <summary>O "se nao tiver, sugere o mais proximo" do fluxo de WhatsApp.</summary>
     public async Task<IReadOnlyList<Slot>> SugerirProximosAsync(
         DateTime desejadoUtc,
         Guid servicoId,
@@ -179,8 +160,6 @@ public class DisponibilidadeService(IAppDbContext db, ConfiguracaoService config
             candidatos.AddRange(await ObterDoDiaAsync(dia, servicoId, barbeiroId, ct));
         }
 
-        // Ordenar por distancia do horario pedido; senao um pedido das 15h recebe
-        // "08:00 de amanha" como melhor sugestao.
         return candidatos
             .OrderBy(s => Math.Abs((s.InicioUtc - desejadoUtc).TotalMinutes))
             .Take(quantidade)

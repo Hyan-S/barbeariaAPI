@@ -4,18 +4,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Barbearia.Api.Endpoints;
 
-/// <summary>
-/// Tela de permissoes: matriz funcionario x permissao, editada de uma vez so.
-/// O cadastro de usuario continua criando a conta; aqui e onde o acesso e ajustado.
-/// </summary>
 public static class PermissoesEndpoints
 {
     public record AlteracaoPermissao(Guid BarbeiroId, string Chave, bool Concedida);
 
-    /// <summary>
-    /// Fonte unica das permissoes existentes. A tela monta as colunas a partir daqui,
-    /// entao adicionar uma permissao nova nao exige mexer no front.
-    /// </summary>
     private static readonly (string Chave, string Nome, string Descricao, bool GestorTemSempre)[] Catalogo =
     [
         ("servicos", "Servicos", "Cadastrar servicos, duracao, preco e quem executa", true),
@@ -78,7 +70,6 @@ public static class PermissoesEndpoints
 
             await db.SaveChangesAsync();
 
-            // O token carrega as permissoes, entao a mudanca so vale no proximo login.
             return Results.Ok(new { aplicadoNoProximoLogin = true });
         });
     }

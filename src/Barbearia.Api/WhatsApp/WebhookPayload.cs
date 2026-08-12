@@ -2,10 +2,6 @@ using System.Text.Json.Serialization;
 
 namespace Barbearia.Api.WhatsApp;
 
-/// <summary>
-/// Recorte do payload da Meta. Tudo anulavel: o mesmo endpoint recebe eventos de
-/// entrega, leitura e mudanca de perfil, e nao pode quebrar em nenhum deles.
-/// </summary>
 public record WebhookPayload
 {
     [JsonPropertyName("entry")] public List<Entry>? Entry { get; init; }

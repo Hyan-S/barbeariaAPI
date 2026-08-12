@@ -5,13 +5,6 @@ using Barbearia.Domain;
 
 namespace Barbearia.Application.WhatsApp;
 
-/// <summary>
-/// Extrai intencao e data/hora da mensagem. Baseado em regras, nao em IA: o
-/// vocabulario de agendamento e pequeno e fechado, e regras sao deterministicas.
-///
-/// Quando a confianca cai, o bot nao chuta horario — devolve o link. Agendar o
-/// cliente no dia errado e pior do que mandar um link.
-/// </summary>
 public static partial class InterpretadorMensagem
 {
     public static LeituraMensagem Ler(string? texto, DateTime? agoraLocal = null)
@@ -34,19 +27,16 @@ public static partial class InterpretadorMensagem
         if (RegexListar().IsMatch(t))
             return new LeituraMensagem(Intencao.ListarMeus, Confianca: Confianca.Alta);
 
-        // Pedido de link vem antes de tentar extrair horario.
         if (RegexPedirLink().IsMatch(t))
             return new LeituraMensagem(Intencao.PedirLink, Confianca: Confianca.Alta);
 
         if (RegexAjuda().IsMatch(t))
             return new LeituraMensagem(Intencao.Ajuda, Confianca: Confianca.Alta);
 
-        // Data sai do texto ANTES da hora: senao "dia 12" vira 12:00.
         var (data, restante) = ExtrairData(t, agora);
         var hora = ExtrairHora(restante);
         var periodo = ExtrairPeriodo(restante);
 
-        // "as 3 da tarde" -> 15h.
         if (hora.HasValue && periodo.HasValue && hora.Value.Hour is >= 1 and <= 11)
         {
             if (periodo is PeriodoDia.Tarde or PeriodoDia.Noite)
@@ -62,7 +52,6 @@ public static partial class InterpretadorMensagem
                 : new LeituraMensagem(Intencao.Desconhecida);
         }
 
-        // Hora sem dia: hoje se ainda nao passou, senao amanha.
         if (hora.HasValue && !data.HasValue)
         {
             var hoje = DateOnly.FromDateTime(agora);
@@ -101,7 +90,6 @@ public static partial class InterpretadorMensagem
 
             if (TentarMontar(dia, mes, ano, out var data))
             {
-                // Data sem ano que ja passou e do ano que vem.
                 if (!m.Groups[3].Success && data < hoje) data = data.AddYears(1);
                 return (data, Remover(t, m));
             }
@@ -203,7 +191,6 @@ public static partial class InterpretadorMensagem
     private static string Remover(string texto, Match m) =>
         texto.Remove(m.Index, m.Length).Insert(m.Index, " ");
 
-    /// <summary>Minusculo e sem acento: "terça" e "TERCA" viram a mesma coisa.</summary>
     private static string Normalizar(string texto)
     {
         var decomposto = texto.ToLowerInvariant().Normalize(NormalizationForm.FormD);
@@ -216,7 +203,6 @@ public static partial class InterpretadorMensagem
         return Regex.Replace(sb.ToString().Normalize(NormalizationForm.FormC), @"\s+", " ").Trim();
     }
 
-    // --- Intencoes ---
     [GeneratedRegex(@"^(sim|s|isso|confirmo?|confirmar|pode ser|fechado|ok|blz|beleza|perfeito|show|ta bom|tá bom|quero esse|esse mesmo|1)$")]
     private static partial Regex RegexConfirmar();
 
@@ -241,7 +227,6 @@ public static partial class InterpretadorMensagem
     [GeneratedRegex(@"\b(oi|ola|bom dia|boa tarde|boa noite|eai|e ai|opa|salve)\b")]
     private static partial Regex RegexSaudacao();
 
-    // --- Data ---
     [GeneratedRegex(@"\bdepois de amanha\b")]
     private static partial Regex RegexDepoisDeAmanha();
 
@@ -260,7 +245,6 @@ public static partial class InterpretadorMensagem
     [GeneratedRegex(@"\b(domingo|segunda|terca|quarta|quinta|sexta|sabado)(?:\s*-?\s*feira)?\b")]
     private static partial Regex RegexDiaSemana();
 
-    // --- Hora ---
     [GeneratedRegex(@"\bmeio\s*-?\s*dia\b")]
     private static partial Regex RegexMeioDia();
 
@@ -279,7 +263,6 @@ public static partial class InterpretadorMensagem
     [GeneratedRegex(@"\b(\d{1,2})\s*(?:da|de)\s+(?:manha|tarde|noite)\b")]
     private static partial Regex RegexHoraComPeriodo();
 
-    // --- Periodo ---
     [GeneratedRegex(@"\bmanha\b")]
     private static partial Regex RegexManha();
 

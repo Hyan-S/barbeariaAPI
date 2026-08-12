@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore.Design;
 
 namespace Barbearia.Infrastructure.Data;
 
-/// <summary>So para o <c>dotnet ef</c>. Em runtime a string vem do ambiente.</summary>
 public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
 {
     public AppDbContext CreateDbContext(string[] args)

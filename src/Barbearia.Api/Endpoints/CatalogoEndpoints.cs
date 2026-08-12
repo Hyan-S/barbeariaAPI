@@ -12,7 +12,6 @@ public static class CatalogoEndpoints
 
     public static void MapCatalogo(this IEndpointRouteBuilder app)
     {
-        // Produtos
         var p = app.MapGroup("/api/produtos").RequireAuthorization("Produtos");
 
         p.MapGet("/", async (AppDbContext db) =>
@@ -62,7 +61,6 @@ public static class CatalogoEndpoints
             await db.Produtos.Where(x => x.Id == id).ExecuteDeleteAsync() > 0
                 ? Results.Ok() : Results.NotFound());
 
-        // Clientes
         var c = app.MapGroup("/api/clientes").RequireAuthorization("Clientes");
 
         c.MapGet("/", async (string? busca, AppDbContext db) =>
@@ -71,7 +69,6 @@ public static class CatalogoEndpoints
 
             if (!string.IsNullOrWhiteSpace(busca))
             {
-                // Normaliza antes para o nono digito nao atrapalhar a busca.
                 var termo = busca.Trim();
                 var telefone = TelefoneBr.Normalizar(termo);
 

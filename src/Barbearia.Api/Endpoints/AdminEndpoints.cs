@@ -56,9 +56,6 @@ public static class AdminEndpoints
 
             return Results.Ok(await cfg.ObterParaTelaAsync());
         });
-        // Diagnostico apenas. A connection string nao e editavel aqui: guardar no
-        // banco seria circular, e daria a quem tomasse a conta admin um jeito de
-        // apontar o sistema para outro banco.
         g.MapGet("/sistema", async (AppDbContext db, IConfiguration config) =>
         {
             var bruta = config.GetConnectionString("Postgres") ?? "";
@@ -162,8 +159,6 @@ public static class AdminEndpoints
             if (await db.Barbeiros.AnyAsync(x => x.Email.ToLower() == email))
                 return Results.Conflict(new { erro = "Ja existe usuario com esse e-mail" });
 
-            // Cadastro a partir de alguem que ja e cliente: aproveita nome e
-            // telefone e mantem as duas fichas ligadas.
             Cliente? origem = null;
             if (req.ClienteId.HasValue)
             {
@@ -185,7 +180,6 @@ public static class AdminEndpoints
                 Perfil = perfil,
                 Atende = req.Atende,
                 Ativo = req.Ativo,
-                // Senha dada pelo admin e sempre provisoria.
                 PrecisaTrocarSenha = true,
                 PodeGerenciarServicos = req.PodeGerenciarServicos,
                 PodeGerenciarProdutos = req.PodeGerenciarProdutos,
@@ -209,7 +203,6 @@ public static class AdminEndpoints
 
             if (!Enum.TryParse<Perfil>(req.Perfil, out var perfil))
                 return Results.BadRequest(new { erro = "Perfil invalido" });
-            // Nao deixa remover o ultimo admin e trancar todo mundo fora.
             var deixaDeSerAdmin = usuario.Perfil == Perfil.Admin && (perfil != Perfil.Admin || !req.Ativo);
 
             if (deixaDeSerAdmin)
@@ -241,7 +234,6 @@ public static class AdminEndpoints
             {
                 if (req.Senha.Length < 8)
                     return Results.BadRequest(new { erro = "Senha precisa de no minimo 8 caracteres" });
-                // Reset feito pelo admin tambem e provisorio.
                 usuario.SenhaHash = hash.Gerar(req.Senha);
                 usuario.PrecisaTrocarSenha = true;
             }
@@ -250,8 +242,6 @@ public static class AdminEndpoints
             return Results.Ok();
         });
 
-        // Visao unica de todo mundo que existe no sistema: funcionario, cliente
-        // ou os dois. Sem isso o admin teria que cruzar duas listas na mao.
         g.MapGet("/pessoas", async (string? busca, AppDbContext db) =>
         {
             var termo = (busca ?? "").Trim();

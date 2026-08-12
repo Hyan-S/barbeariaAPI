@@ -7,7 +7,7 @@
 <title>Agendar horario</title>
 <script>document.documentElement.dataset.tema =
   localStorage.getItem('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro');</script>
-<link rel="stylesheet" href="app.css?v=202608112129">
+<link rel="stylesheet" href="app.css?v=202608121530">
 <style>
   main { max-width: 580px; }
   .trilha { display: flex; align-items: center; gap: 6px; margin-bottom: 22px; }
@@ -38,7 +38,6 @@
   .trilha .no.feito .rotulo { color: var(--texto); font-weight: 550; }
 
   @media (max-width: 520px) { .trilha .rotulo { display: none; } }
-  /* Fita horizontal: mais rapido que abrir o seletor de data no celular. */
   .dias { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; }
 
   .dias button {
@@ -117,7 +116,6 @@
 <main>
   <div id="msg" class="oculto"></div>
 
-  <!-- Confirmacao -->
   <div id="pronto" class="card oculto">
     <div class="sucesso">
       <div class="selo">
@@ -185,7 +183,7 @@
   </div>
 </main>
 
-<script src="app.js?v=202608112129"></script>
+<script src="app.js?v=202608121530"></script>
 <script>
 const msg = document.getElementById('msg');
 const token = new URLSearchParams(location.search).get('t');
@@ -195,20 +193,12 @@ let servicoEscolhido = null;
 let diaEscolhido = null;
 let slotEscolhido = null;
 
-// null = cliente aceita qualquer profissional livre. Nesse caso o barbeiro so e
-// definido no servidor, na hora de gravar.
 let profissionalEscolhido = null;
 
 const PASSOS = ['Servico', 'Profissional', 'Dia', 'Horario', 'Dados'];
 
 iniciar();
 
-/**
- * O botao e sempre "Sair", mas faz coisas diferentes:
- * - veio pelo link do WhatsApp -> descarta a sessao e volta para a tela limpa;
- * - e alguem da barbearia logado -> logout de verdade;
- * - visitante comum -> so sai da tela de agendamento.
- */
 function montarCabecalho() {
   let acoes = '';
 
@@ -229,8 +219,6 @@ function montarCabecalho() {
      <span class="espaco"></span>${acoes}${botaoTema()}`;
 }
 
-// Tira o token da URL para o proximo que abrir o navegador nao ver os
-// agendamentos de quem estava antes.
 function sairDoLink() {
   location.replace(location.pathname);
 }
@@ -267,7 +255,6 @@ async function iniciar() {
   });
 }
 
-// Cada servico tem sua propria equipe: trocar de servico refaz a lista.
 async function carregarProfissionais() {
   profissionalEscolhido = null;
   slotEscolhido = null;
@@ -285,7 +272,6 @@ async function carregarProfissionais() {
     return;
   }
 
-  // Com um profissional so, "qualquer um" seria a mesma coisa — mostramos quem e.
   const opcoes = equipe.length === 1 ? equipe : [{ id: '', nome: 'Qualquer um disponivel' }, ...equipe];
 
   box.innerHTML = opcoes.map(p => `
@@ -394,14 +380,12 @@ async function carregarHorarios() {
   slotEscolhido = null;
   document.getElementById('passoDados').classList.add('oculto');
   document.getElementById('confirmar').classList.add('oculto');
-  // grade=true traz o dia inteiro, inclusive o que ja foi ocupado.
   const slots = await api(
     `/api/disponibilidade?data=${diaEscolhido}&servicoId=${servicoEscolhido.id}&grade=true`
     + (profissionalEscolhido ? `&barbeiroId=${profissionalEscolhido.id}` : ''));
 
   document.getElementById('passoHora').classList.remove('oculto');
   document.getElementById('semHorario').classList.toggle('oculto', slots.length > 0);
-  // Mesmo horario com barbeiros diferentes vira um botao so.
   const porHora = {};
   slots.forEach(s => {
     const atual = porHora[s.hora];
@@ -434,7 +418,6 @@ function resumoHtml(inicioIso, barbeiroConfirmado) {
     ? dataLegivel(inicioIso)
     : `${new Date(diaEscolhido + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' })} as ${slotEscolhido.hora}`;
 
-  // Antes de confirmar, "qualquer um" ainda nao tem dono definido.
   const profissional = barbeiroConfirmado
     || profissionalEscolhido?.nome
     || 'Qualquer um disponivel';
@@ -461,8 +444,6 @@ async function confirmar() {
         telefone: document.getElementById('telefone').value,
         servicoId: servicoEscolhido.id,
         inicioUtc: slotEscolhido.inicioUtc,
-        // Null deixa o servidor escolher quem esta livre na hora de gravar: se dois
-        // clientes pedirem o mesmo horario, cada um cai com um profissional.
         barbeiroId: profissionalEscolhido?.id || null
       })
     });
@@ -474,7 +455,6 @@ async function confirmar() {
     window.scrollTo(0, 0);
   } catch (e) {
     botao.disabled = false;
-    // Alguem pegou o horario primeiro: recarrega para ele aparecer como ocupado.
     if (e.status === 409) {
       aviso(msg, e.message + '. Escolha outro horario abaixo.', 'info');
       carregarHorarios();

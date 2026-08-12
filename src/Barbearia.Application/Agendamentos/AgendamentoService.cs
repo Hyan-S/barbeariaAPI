@@ -34,11 +34,6 @@ public class AgendamentoService(
     ConfiguracaoService configuracao,
     ILogger<AgendamentoService> logger)
 {
-    /// <param name="comoStaff">
-    /// Quando a barbearia agenda pelo painel, pula antecedencia minima e limite por
-    /// cliente: quem esta na recepcao sabe o que esta fazendo. A checagem de
-    /// disponibilidade e a constraint do banco continuam valendo.
-    /// </param>
     public async Task<ResultadoAgendamento> CriarAsync(
         Guid clienteId,
         Guid servicoId,
@@ -80,8 +75,6 @@ public class AgendamentoService(
                 return new ResultadoAgendamento(ResultadoTipo.LimiteDeAgendamentosAtingido);
         }
 
-        // Um candidato com barbeiro escolhido, varios em "qualquer um"; o loop tenta o
-        // proximo se alguem tomar o slot no meio. A constraint do banco e a garantia real.
         var candidatos = await disponibilidade.ObterTodosLivresAsync(inicioUtc, servicoId, barbeiroId, ct);
 
         foreach (var slot in candidatos)
@@ -122,7 +115,6 @@ public class AgendamentoService(
         return new ResultadoAgendamento(ResultadoTipo.HorarioIndisponivel, Sugestoes: sugestoes);
     }
 
-    /// <summary><paramref name="exigirAntecedencia"/> e falso quando quem cancela e a barbearia.</summary>
     public async Task<bool> CancelarAsync(
         Guid agendamentoId,
         Guid? clienteIdParaValidar,
@@ -134,7 +126,6 @@ public class AgendamentoService(
 
         if (agendamento is null || !agendamento.EstaAtivo) return false;
 
-        // Impede um cliente cancelar horario de outro.
         if (clienteIdParaValidar.HasValue && agendamento.ClienteId != clienteIdParaValidar.Value)
             return false;
 
@@ -180,7 +171,6 @@ public class AgendamentoService(
         }
         catch (Exception ex) when (detector.EhConflitoDeHorario(ex))
         {
-            // Duas mensagens do mesmo numero chegando juntas no primeiro contato.
             db.Clientes.Remove(cliente!);
             cliente = await db.Clientes.FirstAsync(c => c.Telefone == telefone, ct);
         }

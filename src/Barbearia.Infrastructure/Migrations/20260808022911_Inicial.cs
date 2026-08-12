@@ -5,10 +5,8 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Barbearia.Infrastructure.Migrations
 {
-    /// <inheritdoc />
     public partial class Inicial : Migration
     {
-        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AlterDatabase()
@@ -258,9 +256,6 @@ namespace Barbearia.Infrastructure.Migrations
                 table: "mensagens_processadas",
                 column: "ProcessadaEmUtc");
 
-            // Impede dois agendamentos do mesmo barbeiro se sobreporem no tempo.
-            // Feito no banco porque checagem em C# perde a corrida entre duas
-            // requisicoes simultaneas. Status 2 = Cancelado, que nao ocupa horario.
             migrationBuilder.Sql("""
                 ALTER TABLE agendamentos
                 ADD CONSTRAINT ck_agendamentos_sem_sobreposicao
@@ -271,7 +266,6 @@ namespace Barbearia.Infrastructure.Migrations
                 """);
         }
 
-        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(

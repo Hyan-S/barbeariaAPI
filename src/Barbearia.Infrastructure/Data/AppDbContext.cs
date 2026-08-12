@@ -23,8 +23,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     protected override void OnModelCreating(ModelBuilder b)
     {
-        // Exigida pela constraint EXCLUDE: combina igualdade de uuid com
-        // sobreposicao de intervalo no mesmo indice GiST.
         b.HasPostgresExtension("btree_gist");
 
         b.Entity<Barbeiro>(e =>
@@ -83,7 +81,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasKey(x => x.Id);
             e.Property(x => x.Telefone).HasMaxLength(20).IsRequired();
             e.Property(x => x.Nome).HasMaxLength(120);
-            // Unico: impede o cadastro duplicado que o nono digito causa.
             e.HasIndex(x => x.Telefone).IsUnique();
         });
 

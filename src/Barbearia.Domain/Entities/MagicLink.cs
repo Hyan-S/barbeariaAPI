@@ -1,9 +1,5 @@
 namespace Barbearia.Domain.Entities;
 
-/// <summary>
-/// Acesso sem senha enviado pelo WhatsApp. So o hash fica no banco: se ele vazar,
-/// os links nao sao reutilizaveis.
-/// </summary>
 public class MagicLink
 {
     public Guid Id { get; set; } = Guid.NewGuid();

@@ -5,10 +5,8 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Barbearia.Infrastructure.Migrations
 {
-    /// <inheritdoc />
     public partial class FuncionarioPessoa : Migration
     {
-        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AddColumn<Guid>(
@@ -38,7 +36,6 @@ namespace Barbearia.Infrastructure.Migrations
                 onDelete: ReferentialAction.SetNull);
         }
 
-        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropForeignKey(

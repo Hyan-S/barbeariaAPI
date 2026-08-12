@@ -13,7 +13,6 @@ public static class WebhookEndpoints
     {
         var g = app.MapGroup("/webhook/whatsapp").ExcludeFromDescription();
 
-        // A Meta chama este GET uma vez, ao registrar o webhook.
         g.MapGet("/", async (HttpContext ctx, ConfiguracaoService cfg) =>
         {
             var q = ctx.Request.Query;
@@ -36,8 +35,6 @@ public static class WebhookEndpoints
             if (!config.EstaConfigurado())
                 return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
 
-            // Corpo bruto e obrigatorio: a assinatura cobre os bytes exatos que a
-            // Meta enviou, e reserializar o JSON invalida a conferencia.
             using var buffer = new MemoryStream();
             await ctx.Request.Body.CopyToAsync(buffer, ct);
             var corpo = buffer.ToArray();
@@ -56,7 +53,6 @@ public static class WebhookEndpoints
             }
             catch (JsonException ex)
             {
-                // 200 de proposito: payload malformado nao melhora com reentrega.
                 log.LogWarning(ex, "Payload do webhook ilegivel");
                 return Results.Ok();
             }
@@ -65,7 +61,6 @@ public static class WebhookEndpoints
                 if (!fila.Enfileirar(mensagem))
                     log.LogWarning("Fila cheia, mensagem {Id} descartada", mensagem.MessageId);
 
-            // Responde na hora; o trabalho roda no ProcessadorDeMensagens.
             return Results.Ok();
         });
     }
@@ -88,7 +83,6 @@ public static class WebhookEndpoints
                 var nome = valor.Contacts?.FirstOrDefault(c => c.WaId == msg.From)?.Profile?.Name;
                 var opcao = msg.Interactive?.ButtonReply?.Id ?? msg.Interactive?.ListReply?.Id;
 
-                // Audio e imagem chegam sem texto nem opcao: o bot manda o link.
                 var texto = msg.Text?.Body ?? string.Empty;
 
                 yield return new MensagemRecebida(msg.Id, msg.From, nome, texto, opcao);

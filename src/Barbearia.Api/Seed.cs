@@ -23,8 +23,6 @@ public static class Seed
             Atende = false
         });
 
-        // Conta de exemplo: senha aleatoria e descartada, nunca a do admin. Quem
-        // for usa-la passa pelo reset do admin, que ja marca a troca obrigatoria.
         var barbeiro = new Barbeiro
         {
             Nome = "Joao Barbeiro",
@@ -43,7 +41,6 @@ public static class Seed
             new Servico { Nome = "Corte", DuracaoMinutos = 30, PrecoCentavos = 4000 },
             new Servico { Nome = "Corte + Barba", DuracaoMinutos = 60, PrecoCentavos = 7000 });
 
-        // Segunda a sabado, 09:00-12:00 e 13:00-19:00.
         foreach (var dia in new[]
                  {
                      DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday,

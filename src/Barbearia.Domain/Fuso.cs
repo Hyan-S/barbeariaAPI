@@ -1,8 +1,5 @@
 namespace Barbearia.Domain;
 
-/// <summary>
-/// Conversao entre UTC (como tudo e gravado) e o horario local da barbearia.
-/// </summary>
 public static class Fuso
 {
     public static readonly TimeZoneInfo Barbearia = ResolverFuso();
@@ -28,7 +25,6 @@ public static class Fuso
             catch (InvalidTimeZoneException) { }
         }
 
-        // O Brasil nao usa horario de verao desde 2019, entao UTC-3 fixo e correto.
         return TimeZoneInfo.CreateCustomTimeZone("BRT-Fallback", TimeSpan.FromHours(-3), "BRT", "BRT");
     }
 }

@@ -27,7 +27,6 @@ public class AppOptions
 
     public string UrlPublica { get; set; } = "http://localhost:5173";
 
-    /// <summary>Origens liberadas no CORS, separadas por virgula.</summary>
     public string OrigensPermitidas { get; set; } = "http://localhost:5173";
 
     public int MagicLinkMinutosValidade { get; set; } = 30;
@@ -45,16 +44,13 @@ public class WhatsAppOptions
     public string AppSecret { get; set; } = string.Empty;
     public string AccessToken { get; set; } = string.Empty;
 
-    /// <summary>Id do numero na Meta, nao o numero em si.</summary>
     public string PhoneNumberId { get; set; } = string.Empty;
 
-    /// <summary>O numero em si, so para exibir. Nao e usado no envio.</summary>
     public string NumeroExibicao { get; set; } = string.Empty;
 
     public string NumerosPermitidos { get; set; } = string.Empty;
     public string ApiVersion { get; set; } = "v21.0";
 
-    /// <summary>Modo teste: vazio atende todo mundo, preenchido restringe a lista.</summary>
     public bool PodeAtender(string telefoneCanonico)
     {
         if (string.IsNullOrWhiteSpace(NumerosPermitidos)) return true;

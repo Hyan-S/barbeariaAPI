@@ -6,17 +6,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Barbearia.Api.WhatsApp;
 
-/// <summary>
-/// A Meta exige 200 em poucos segundos, senao reentrega a mensagem. Processar o
-/// agendamento dentro da request (banco + chamada de volta) estoura esse tempo,
-/// ainda mais com o cold start do plano free.
-/// </summary>
 public class FilaDeMensagens
 {
     private readonly Channel<MensagemRecebida> _canal =
         Channel.CreateBounded<MensagemRecebida>(new BoundedChannelOptions(500)
         {
-            // Melhor descartar o mais antigo do que travar o webhook.
             FullMode = BoundedChannelFullMode.DropOldest
         });
 
@@ -45,7 +39,6 @@ public class ProcessadorDeMensagens(
             }
             catch (Exception ex)
             {
-                // Uma mensagem ruim nao pode derrubar o processador.
                 logger.LogError(ex, "Erro ao processar mensagem {Id}", mensagem.MessageId);
             }
         }
@@ -57,7 +50,6 @@ public class ProcessadorDeMensagens(
         var db = scope.ServiceProvider.GetRequiredService<IAppDbContext>();
         var conversa = scope.ServiceProvider.GetRequiredService<ConversaService>();
 
-        // Gravar o id primeiro, com indice unico, e o que impede o duplicado.
         if (await db.MensagensProcessadas.AnyAsync(m => m.Id == mensagem.MessageId, ct))
         {
             logger.LogDebug("Mensagem {Id} ja processada, ignorando", mensagem.MessageId);

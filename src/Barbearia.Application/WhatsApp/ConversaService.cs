@@ -10,10 +10,6 @@ using Microsoft.Extensions.Options;
 
 namespace Barbearia.Application.WhatsApp;
 
-/// <summary>
-/// Decide o que responder a partir da mensagem interpretada.
-/// Em caso de duvida, manda o link em vez de chutar horario.
-/// </summary>
 public class ConversaService(
     IAppDbContext db,
     AgendamentoService agendamentos,
@@ -75,7 +71,6 @@ public class ConversaService(
         }
     }
 
-    /// <summary>Resposta de botao ou item de lista.</summary>
     public async Task ProcessarSelecaoAsync(string telefone, string? nomePerfil, string idOpcao,
         CancellationToken ct = default)
     {
@@ -116,7 +111,6 @@ public class ConversaService(
             return;
         }
 
-        // Confianca baixa nunca vira agendamento.
         if (leitura.Confianca == Confianca.Baixa || !leitura.Data.HasValue)
         {
             await EnviarLinkAsync(cliente,
@@ -156,7 +150,6 @@ public class ConversaService(
             return;
         }
 
-        // So o dia, e talvez o periodo: mostra a lista.
         var slots = await disponibilidade.ObterDoDiaAsync(dia, servico.Id, ct: ct);
         slots = FiltrarPorPeriodo(slots, leitura.Periodo);
 
@@ -362,10 +355,6 @@ public class ConversaService(
             PeriodoDia.Noite => slots.Where(s => s.InicioLocal.Hour >= 18).ToList(),
             _ => slots
         };
-    /// <summary>
-    /// A lista da Meta aceita 10 itens. Com slots de 15 minutos isso cobriria so
-    /// 2h30, entao pegamos horarios espalhados pelo expediente inteiro.
-    /// </summary>
     private static IReadOnlyList<Slot> EspalharSlots(IReadOnlyList<Slot> slots, int maximo = 10)
     {
         if (slots.Count <= maximo) return slots;
@@ -398,7 +387,6 @@ public class ConversaService(
 
     private static string PrimeiroNome(string nome) =>
         string.IsNullOrWhiteSpace(nome) ? nome : nome.Split(' ')[0];
-    /// <summary>"hoje", "amanha", "sexta (12/09)" — como a pessoa fala.</summary>
     private static string Dia(DateOnly data)
     {
         var hoje = Fuso.HojeLocal();
@@ -419,7 +407,6 @@ public class ConversaService(
         return $"{nome} ({data:dd/MM})";
     }
 }
-/// <summary>Ids que vao e voltam pela Meta: curtos (limite 200) e sem dado sensivel.</summary>
 public static class Opcoes
 {
     public const string Confirmar = "confirmar";

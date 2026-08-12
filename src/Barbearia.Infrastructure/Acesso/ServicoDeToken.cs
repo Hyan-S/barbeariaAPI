@@ -19,8 +19,6 @@ public class ServicoDeToken(IOptions<JwtOptions> options) : IServicoDeToken
         var chave = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_cfg.Secret));
         var credenciais = new SigningCredentials(chave, SecurityAlgorithms.HmacSha256);
 
-        // Nomes curtos ("role", "name") em vez dos URIs longos da Microsoft: o handler
-        // le com MapInboundClaims=false, e o token nao carrega schema desnecessario.
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, barbeiro.Id.ToString()),
@@ -31,7 +29,6 @@ public class ServicoDeToken(IOptions<JwtOptions> options) : IServicoDeToken
 
         claims.Add(new Claim("role", barbeiro.Perfil.ToString()));
 
-        // Senha provisoria pendente: o token nao abre nada.
         if (barbeiro.PrecisaTrocarSenha)
             claims.Add(new Claim("trocar_senha", "1"));
 
@@ -53,11 +50,6 @@ public class ServicoDeToken(IOptions<JwtOptions> options) : IServicoDeToken
 
 public class HashDeSenha(IConfiguration config) : IHashDeSenha
 {
-    // Cada ponto dobra o custo. 12 leva ~250ms num PC comum, mas o plano free do
-    // Render da 0,1 de CPU e o mesmo calculo passa de 2s — o usuario sente o login
-    // travar. 10 e o minimo recomendado pela OWASP e cai para ~0,5s aqui; com o
-    // rate limit de 8 tentativas por minuto, a forca bruta continua inviavel.
-    // Suba de novo (Seguranca__BcryptWorkFactor) se um dia sair do plano free.
     private readonly int _custo = Faixa(config.GetValue("Seguranca:BcryptWorkFactor", 10));
 
     public int Custo => _custo;
@@ -70,10 +62,8 @@ public class HashDeSenha(IConfiguration config) : IHashDeSenha
         catch (BCrypt.Net.SaltParseException) { return false; }
     }
 
-    /// <summary>Hash antigo, gerado com custo diferente do atual.</summary>
     public bool PrecisaRegerar(string hash)
     {
-        // Formato: $2a$<custo>$<salt+hash>
         var partes = hash.Split('$');
         return partes.Length < 4 || !int.TryParse(partes[2], out var custo) || custo != _custo;
     }

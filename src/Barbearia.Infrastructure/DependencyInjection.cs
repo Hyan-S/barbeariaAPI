@@ -30,8 +30,6 @@ public static class DependencyInjection
 
         services.AddDbContext<AppDbContext>(opt => opt.UseNpgsql(conexao, npgsql =>
         {
-            // O Postgres gratuito hiberna e a primeira query depois de um tempo
-            // parado falha; o retry evita o erro chegar no cliente.
             npgsql.EnableRetryOnFailure(3, TimeSpan.FromSeconds(3), null);
         }));
 

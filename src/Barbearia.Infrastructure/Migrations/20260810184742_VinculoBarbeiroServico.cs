@@ -5,10 +5,8 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Barbearia.Infrastructure.Migrations
 {
-    /// <inheritdoc />
     public partial class VinculoBarbeiroServico : Migration
     {
-        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
@@ -41,7 +39,6 @@ namespace Barbearia.Infrastructure.Migrations
                 column: "ServicoId");
         }
 
-        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(

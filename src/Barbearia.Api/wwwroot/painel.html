@@ -7,7 +7,7 @@
 <title>Painel</title>
 <script>document.documentElement.dataset.tema =
   localStorage.getItem('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro');</script>
-<link rel="stylesheet" href="app.css?v=202608112129">
+<link rel="stylesheet" href="app.css?v=202608121530">
 </head>
 <body>
 <header class="topo" id="topo"></header>
@@ -18,7 +18,6 @@
 <main class="conteudo">
   <div id="msg" class="oculto"></div>
 
-  <!-- NOVO AGENDAMENTO -->
   <section id="secao-novo" class="oculto">
     <div class="card">
       <h2>Novo agendamento</h2>
@@ -85,7 +84,6 @@
     </div>
   </section>
 
-  <!-- DASHBOARD -->
   <section id="secao-dashboard" class="oculto">
     <div class="card">
       <h2>Dashboard</h2>
@@ -181,7 +179,6 @@
     </div>
   </section>
 
-  <!-- PERMISSOES -->
   <section id="secao-permissoes" class="oculto">
     <div class="card">
       <h2>Permissoes</h2>
@@ -205,7 +202,6 @@
     </div>
   </section>
 
-  <!-- PESSOAS -->
   <section id="secao-pessoas" class="oculto">
     <div class="card">
       <h2>Pessoas no sistema</h2>
@@ -235,7 +231,6 @@
     </div>
   </section>
 
-  <!-- AGENDA -->
   <section id="secao-agenda">
     <div class="card">
       <h2>Agenda</h2>
@@ -319,7 +314,6 @@
       <div id="agendaTruncada" class="aviso info oculto" style="margin-top:14px"></div>
     </div>
 
-    <!-- Reagendamento -->
     <div class="card oculto" id="cardReagendar">
       <h2 id="tituloReagendar">Reagendar</h2>
       <p class="ajuda" id="subReagendar"></p>
@@ -340,7 +334,6 @@
     </div>
   </section>
 
-  <!-- SERVICOS -->
   <section id="secao-servicos" class="oculto">
     <div class="card">
       <h2 id="tituloServico">Novo servico</h2>
@@ -384,7 +377,6 @@
     </div>
   </section>
 
-  <!-- HORARIOS -->
   <section id="secao-horarios" class="oculto">
     <div class="card">
       <h2>Novo horario de funcionamento</h2>
@@ -419,7 +411,6 @@
     </div>
   </section>
 
-  <!-- BLOQUEIOS -->
   <section id="secao-bloqueios" class="oculto">
     <div class="card">
       <h2>Bloquear periodo</h2>
@@ -454,7 +445,6 @@
     </div>
   </section>
 
-  <!-- PRODUTOS -->
   <section id="secao-produtos" class="oculto">
     <div class="card">
       <h2 id="tituloProduto">Novo produto</h2>
@@ -500,7 +490,6 @@
     </div>
   </section>
 
-  <!-- CLIENTES -->
   <section id="secao-clientes" class="oculto">
     <div class="card">
       <h2>Clientes</h2>
@@ -551,7 +540,6 @@
     </div>
   </section>
 
-  <!-- SISTEMA (so admin) -->
   <section id="secao-sistema" class="oculto">
     <div class="card">
       <h2>Banco de dados <span id="statusBanco" class="tag">verificando</span></h2>
@@ -580,7 +568,6 @@
     </div>
   </section>
 
-  <!-- CONFIGURACAO (so admin) -->
   <section id="secao-config" class="oculto">
     <div class="card">
       <h2>Identificacao</h2>
@@ -721,7 +708,6 @@
     </div>
   </section>
 
-  <!-- FUNCIONARIOS -->
   <section id="secao-funcionarios" class="oculto">
     <div class="card">
       <h2 id="tituloUsuario">Novo usuario</h2>
@@ -809,6 +795,8 @@
         </div>
       </div>
 
+      <div id="avisoLimite" class="oculto"></div>
+
       <button class="btn" id="salvarUsuario">Salvar</button>
       <button class="btn neutro oculto" id="cancelarEdicao">Cancelar</button>
     </div>
@@ -824,7 +812,7 @@
 </main>
 </div>
 
-<script src="app.js?v=202608112129"></script>
+<script src="app.js?v=202608121530"></script>
 <script>
 const msg = document.getElementById('msg');
 let barbeiros = [];
@@ -893,7 +881,6 @@ function iniciar() {
   document.getElementById('reConfirmar').onclick = confirmarReagendamento;
   document.getElementById('reCancelar').onclick = fecharReagendar;
 
-  // Servicos dependem da lista de barbeiros para montar as caixas de "quem faz".
   const barbeirosProntos = carregarBarbeiros();
   barbeirosProntos.then(carregarAgenda);
 
@@ -954,7 +941,6 @@ function iniciar() {
   }
 }
 
-// ---- Novo agendamento pelo painel ----
 let agCliente = null;
 let agSlot = null;
 
@@ -996,7 +982,6 @@ async function buscarClienteParaAgendar() {
       box.querySelectorAll('button').forEach(x => x.classList.remove('escolhido'));
       b.classList.add('escolhido');
       agCliente = { id: b.dataset.id, nome: b.dataset.nome };
-      // Escolheu da lista: os campos de cadastro novo saem de cena.
       document.getElementById('agNome').value = '';
       document.getElementById('agTelefone').value = '';
       atualizarBotaoAgendar();
@@ -1078,7 +1063,6 @@ async function confirmarPeloPainel() {
   }
 }
 
-// ---- Pessoas ----
 async function carregarPessoas() {
   const termo = document.getElementById('buscaPessoa').value.trim();
   const d = await api('/api/admin/pessoas' + (termo ? '?busca=' + encodeURIComponent(termo) : ''));
@@ -1107,7 +1091,6 @@ async function carregarPessoas() {
   });
 }
 
-// Abre o cadastro de funcionario ja preenchido a partir do cliente escolhido.
 function promoverParaFuncionario(clienteId, nome) {
   document.querySelector('.lateral button[data-chave="funcionarios"]').click();
 
@@ -1296,12 +1279,10 @@ async function carregarSistema() {
   document.getElementById('infoVars').innerHTML =
     s.variaveis.map(v => `<div class="copiavel" style="margin-bottom:7px">${v}</div>`).join('');
 }
-// Cada periodo devolve [de, ate] em ISO local.
 const PERIODOS = {
   hoje:    () => { const h = dataHoje(); return [h, h]; },
   semana:  () => {
     const d = new Date();
-    // Semana comecando na segunda: domingo (0) volta 6 dias, nao 0.
     d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
     const fim = new Date(d); fim.setDate(fim.getDate() + 6);
     return [iso(d), iso(fim)];
@@ -1354,7 +1335,6 @@ function montarPeriodos() {
   document.getElementById('fAte').value = ate;
 }
 
-// Setas movem os dois extremos juntos, preservando o tamanho da janela.
 function moverDia(delta) {
   const de = new Date(document.getElementById('fDe').value + 'T12:00:00');
   const ate = new Date(document.getElementById('fAte').value + 'T12:00:00');
@@ -1384,7 +1364,6 @@ async function carregarBarbeiros() {
   document.getElementById('bBarbeiro').innerHTML = opcoes;
   document.getElementById('fBarbeiro').innerHTML = '<option value="">Todos</option>' + opcoes;
 
-  // Barbeiro cai direto na propria agenda; ainda pode trocar para Todos.
   if (Auth.perfil === 'Barbeiro' && barbeiros.some(b => b.id === Auth.id))
     document.getElementById('fBarbeiro').value = Auth.id;
 
@@ -1466,7 +1445,6 @@ function horas(min) {
   return m ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`;
 }
 
-// ---- Reagendamento ----
 let reSlot = null;
 
 function abrirReagendar(id, info) {
@@ -1770,6 +1748,15 @@ async function carregarUsuarios() {
   document.getElementById('vagas').innerHTML =
     `<span class="tag ${cheio ? 'erro' : 'ok'}">${dados.emUso} de ${dados.limite} usuarios ativos</span>`;
 
+  const limite = document.getElementById('avisoLimite');
+  if (cheio) {
+    limite.className = 'aviso erro';
+    limite.textContent = `Limite de ${dados.limite} usuarios ativos atingido: nao da para criar mais. `
+      + 'Aumente "Limite de usuarios do sistema" em Configuracao, ou desative alguem abaixo.';
+  } else {
+    limite.className = 'oculto';
+  }
+
   corpo.innerHTML = lista.map(u => {
     const perms = [
       u.podeGerenciarServicos ? 'servicos' : null,
@@ -1861,10 +1848,8 @@ async function salvarUsuario() {
   } catch (e) { aviso(msg, e.message); }
 }
 
-// Por ultimo: iniciar antes das constantes acima estoura ReferenceError (TDZ).
 if (Auth.exigirLogin()) iniciar();
 
-// ---- Permissoes ----
 async function carregarPermissoes() {
   const d = await api('/api/admin/permissoes');
 
@@ -1873,7 +1858,6 @@ async function carregarPermissoes() {
 
   document.getElementById('permCorpo').innerHTML = d.pessoas.map(p => {
     const celulas = d.permissoes.map(perm => {
-      // Admin e Gestor recebem por perfil; caixa marcada sugeriria que desmarcar tira, e nao tira.
       if (p.perfil === 'Admin') return '<td><span class="tag ok">tudo</span></td>';
       if (perm.gestorTemSempre && p.perfil === 'Gestor')
         return '<td><span class="tag ok">por perfil</span></td>';
@@ -1910,7 +1894,6 @@ async function carregarPermissoes() {
     `<tr><th style="width:24%">${p.nome}</th><td>${p.descricao}</td></tr>`).join('');
 }
 
-// ---- Dashboard ----
 function diasAtras(n) { const d = new Date(); d.setDate(d.getDate() + n); return iso(d); }
 
 const PERIODOS_D = {
@@ -1949,7 +1932,6 @@ function tile(rot, num, sub, classe) {
     <div class="num">${num}</div><div class="sub">${sub || '&nbsp;'}</div></div>`;
 }
 
-// Valor sempre escrito ao lado: leitura nao depende de comparar comprimentos.
 function barrasH(el, itens, formatar) {
   const max = Math.max(1, ...itens.map(i => i.valor));
 
@@ -1965,7 +1947,6 @@ function barrasH(el, itens, formatar) {
 
 function dataCurta(d) { const p = String(d).slice(0, 10).split('-'); return `${p[2]}/${p[1]}`; }
 
-// Traco em SVG esticado; ponto, cruz e dica em HTML por cima, senao achatariam.
 function serieTempo(el, pontos) {
   el.onmousemove = null;
   el.onmouseleave = null;

@@ -1,12 +1,5 @@
 namespace Barbearia.Domain.Entities;
 
-/// <summary>
-/// Datas sempre em UTC; a conversao para America/Sao_Paulo acontece so na borda.
-///
-/// A garantia de que dois clientes nao pegam o mesmo horario esta numa constraint
-/// EXCLUDE do Postgres, nao aqui nem no service: checagem em codigo perde a corrida
-/// entre duas requisicoes simultaneas.
-/// </summary>
 public class Agendamento
 {
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -20,10 +13,6 @@ public class Agendamento
     public Guid ServicoId { get; set; }
     public Servico? Servico { get; set; }
 
-    /// <summary>
-    /// Preco congelado no momento do agendamento. Sem isso, reajustar um servico
-    /// reescreveria o faturamento ja realizado no dashboard.
-    /// </summary>
     public int PrecoCentavos { get; set; }
 
     public DateTime InicioUtc { get; set; }
