@@ -368,8 +368,10 @@ a { color: var(--latao); }
   header.topo .quem { display: none; }
 
   /* Campos lado a lado viram um por linha: 155px de largura util nao da para
-     digitar telefone nem escolher horario com o dedo. */
-  .linha > * { min-width: 100%; }
+     digitar telefone nem escolher horario com o dedo. Empilhar por
+     flex-direction, e nao por min-width:100%, evita estourar a largura. */
+  .linha { flex-direction: column; }
+  .linha > * { min-width: 0; }
 
   .resumo-agenda { gap: 14px 22px; padding: 12px 14px; }
   .resumo-agenda .val { font-size: 15px; }
@@ -377,6 +379,12 @@ a { color: var(--latao); }
   .tiles { grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 10px; }
 
   .horarios { grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 7px; }
+
+  /* Sem largura minima, oito colunas espremidas em 360px viram uma letra por
+     linha. Com ela a tabela rola dentro do proprio quadro — a pagina fica parada. */
+  .rolagem table { min-width: 540px; }
+  .rolagem { -webkit-overflow-scrolling: touch; }
+  th, td { padding: 10px 8px; }
 
   .passo h3 { margin-bottom: 9px; }
 }
@@ -455,6 +463,13 @@ a { color: var(--latao); }
 }
 
 .conteudo { max-width: 900px; padding: 24px 20px 72px; width: 100%; }
+
+/* Filho de grid tem min-width:auto e se recusa a encolher abaixo do proprio
+   conteudo: uma tabela larga estica a coluna e a PAGINA inteira passa a rolar
+   para o lado. Com min-width:0 a coluna encolhe e a rolagem fica dentro do
+   .rolagem, que e onde ela deve acontecer. */
+.app > * { min-width: 0; }
+.rolagem { max-width: 100%; }
 
 .abrir-menu { display: none; }
 

@@ -8,7 +8,7 @@
 <!-- Antes do CSS: evita piscar branco ao abrir no tema escuro. -->
 <script>document.documentElement.dataset.tema =
   localStorage.getItem('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro');</script>
-<link rel="stylesheet" href="app.css?v=202608112122">
+<link rel="stylesheet" href="app.css?v=202608112129">
 <style>
   /* min-height, nao height: com height fixo o conteudo estoura e o rodape some. */
   body {
@@ -237,7 +237,7 @@
   </div>
 </main>
 
-<script src="app.js?v=202608112122"></script>
+<script src="app.js?v=202608112129"></script>
 <script>
 if (Auth.token) location.replace('painel.html');
 
