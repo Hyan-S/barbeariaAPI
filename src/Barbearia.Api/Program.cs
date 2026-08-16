@@ -202,7 +202,23 @@ else
 }
 
 app.UseDefaultFiles();
-app.UseStaticFiles();
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        // O HTML nao pode ficar preso no cache do navegador. Sao as paginas que
+        // carregam "app.js?v=...", entao um index.html velho continua pedindo o
+        // js velho: depois de um deploy a pessoa segue vendo a tela antiga e o
+        // bug que ja foi corrigido. "no-cache" nao proibe guardar, so obriga a
+        // revalidar — quando nada mudou volta 304, que e barato.
+        // Os arquivos com ?v= no nome podem ser guardados a vontade.
+        var ehPagina = ctx.File.Name.EndsWith(".html", StringComparison.OrdinalIgnoreCase);
+
+        ctx.Context.Response.Headers.CacheControl =
+            ehPagina ? "no-cache, must-revalidate" : "public, max-age=604800";
+    }
+});
 app.UseCors();
 app.UseRateLimiter();
 app.UseAuthentication();
