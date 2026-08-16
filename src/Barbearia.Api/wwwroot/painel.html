@@ -7,7 +7,7 @@
 <title>Painel</title>
 <script>document.documentElement.dataset.tema =
   localStorage.getItem('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro');</script>
-<link rel="stylesheet" href="app.css?v=202608121530">
+<link rel="stylesheet" href="app.css?v=202608161300">
 </head>
 <body>
 <header class="topo" id="topo"></header>
@@ -812,7 +812,7 @@
 </main>
 </div>
 
-<script src="app.js?v=202608121530"></script>
+<script src="app.js?v=202608161300"></script>
 <script>
 const msg = document.getElementById('msg');
 let barbeiros = [];
@@ -949,11 +949,11 @@ async function prepararNovoAgendamento() {
 
   const servicos = await api('/api/servicos');
   document.getElementById('agServico').innerHTML =
-    servicos.map(s => `<option value="${s.id}">${s.nome} (${s.duracaoMinutos}min)</option>`).join('');
+    servicos.map(s => `<option value="${esc(s.id)}">${esc(s.nome)} (${s.duracaoMinutos}min)</option>`).join('');
 
   document.getElementById('agBarbeiro').innerHTML =
     '<option value="">Qualquer barbeiro</option>' +
-    barbeiros.map(b => `<option value="${b.id}">${b.nome}</option>`).join('');
+    barbeiros.map(b => `<option value="${esc(b.id)}">${esc(b.nome)}</option>`).join('');
 
   document.getElementById('agData').value = dataHoje();
   carregarHorariosPainel();
@@ -972,8 +972,8 @@ async function buscarClienteParaAgendar() {
   }
 
   box.innerHTML = lista.slice(0, 6).map(c => `
-    <button data-id="${c.id}" data-nome="${c.nome || ''}">
-      <span><strong>${c.nome || 'sem nome'}</strong><br><span class="preco">${c.telefone}</span></span>
+    <button data-id="${esc(c.id)}" data-nome="${esc(c.nome || '')}">
+      <span><strong>${esc(c.nome || 'sem nome')}</strong><br><span class="preco">${esc(c.telefone)}</span></span>
       <span class="preco">${c.agendamentos} agend.</span>
     </button>`).join('');
 
@@ -1069,21 +1069,21 @@ async function carregarPessoas() {
 
   document.getElementById('listaPessoasFunc').innerHTML = d.funcionarios.map(f => `
     <tr>
-      <td>${f.nome}${f.clienteId ? ' <span class="tag">tambem cliente</span>' : ''}</td>
-      <td>${f.email}</td>
-      <td>${f.telefone || '-'}</td>
-      <td><span class="tag">${f.perfil}</span></td>
+      <td>${esc(f.nome)}${f.clienteId ? ' <span class="tag">tambem cliente</span>' : ''}</td>
+      <td>${esc(f.email)}</td>
+      <td>${esc(f.telefone) || '-'}</td>
+      <td><span class="tag">${esc(f.perfil)}</span></td>
       <td><span class="tag ${f.ativo ? 'ok' : 'erro'}">${f.ativo ? 'ativo' : 'inativo'}</span></td>
     </tr>`).join('') || '<tr><td colspan="5" class="vazio">Nenhum funcionario.</td></tr>';
 
   document.getElementById('listaPessoasCli').innerHTML = d.clientes.map(c => `
     <tr>
-      <td>${c.nome || '<span class="preco">sem nome</span>'}
-          ${c.ehFuncionario ? `<span class="tag ok">${c.ehFuncionario}</span>` : ''}</td>
-      <td>${c.telefone}</td>
+      <td>${c.nome ? esc(c.nome) : '<span class="preco">sem nome</span>'}
+          ${c.ehFuncionario ? `<span class="tag ok">${esc(c.ehFuncionario)}</span>` : ''}</td>
+      <td>${esc(c.telefone)}</td>
       <td>${c.agendamentos}</td>
       <td><span class="tag ${c.bloqueado ? 'erro' : 'ok'}">${c.bloqueado ? 'bloqueado' : 'ativo'}</span></td>
-      <td>${c.ehFuncionario ? '' : `<button class="btn pequeno neutro" data-id="${c.id}" data-nome="${c.nome || ''}">Tornar funcionario</button>`}</td>
+      <td>${c.ehFuncionario ? '' : `<button class="btn pequeno neutro" data-id="${esc(c.id)}" data-nome="${esc(c.nome || '')}">Tornar funcionario</button>`}</td>
     </tr>`).join('') || '<tr><td colspan="5" class="vazio">Nenhum cliente.</td></tr>';
 
   document.querySelectorAll('#listaPessoasCli button').forEach(b => {
@@ -1112,7 +1112,7 @@ async function alternarOrigemFuncionario() {
   const lista = await api('/api/clientes');
   document.getElementById('uCliente').innerHTML =
     '<option value="">Selecione...</option>' +
-    lista.map(c => `<option value="${c.id}" data-nome="${c.nome || ''}">${c.nome || 'sem nome'} — ${c.telefone}</option>`).join('');
+    lista.map(c => `<option value="${esc(c.id)}" data-nome="${esc(c.nome || '')}">${esc(c.nome || 'sem nome')} — ${esc(c.telefone)}</option>`).join('');
 
   document.getElementById('uCliente').onchange = e => {
     const op = e.target.selectedOptions[0];
@@ -1128,13 +1128,13 @@ async function carregarProdutos() {
 
   corpo.innerHTML = lista.map(p => `
     <tr>
-      <td>${p.nome}${p.descricao ? `<br><span class="preco">${p.descricao}</span>` : ''}</td>
+      <td>${esc(p.nome)}${p.descricao ? `<br><span class="preco">${esc(p.descricao)}</span>` : ''}</td>
       <td>${moeda(p.precoCentavos)}</td>
       <td>${p.estoque}</td>
       <td><span class="tag ${p.ativo ? 'ok' : 'erro'}">${p.ativo ? 'ativo' : 'inativo'}</span></td>
       <td>
-        <button class="btn pequeno neutro" data-editar="${p.id}">Editar</button>
-        <button class="btn pequeno perigo" data-remover="${p.id}">Remover</button>
+        <button class="btn pequeno neutro" data-editar="${esc(p.id)}">Editar</button>
+        <button class="btn pequeno perigo" data-remover="${esc(p.id)}">Remover</button>
       </td>
     </tr>`).join('');
 
@@ -1202,11 +1202,11 @@ async function carregarClientes() {
 
   corpo.innerHTML = lista.map(c => `
     <tr>
-      <td>${c.nome || '<span class="preco">sem nome</span>'}</td>
-      <td>${c.telefone}</td>
+      <td>${c.nome ? esc(c.nome) : '<span class="preco">sem nome</span>'}</td>
+      <td>${esc(c.telefone)}</td>
       <td>${c.agendamentos}</td>
       <td><span class="tag ${c.bloqueado ? 'erro' : 'ok'}">${c.bloqueado ? 'bloqueado' : 'ativo'}</span></td>
-      <td><button class="btn pequeno neutro" data-id="${c.id}">Abrir</button></td>
+      <td><button class="btn pequeno neutro" data-id="${esc(c.id)}">Abrir</button></td>
     </tr>`).join('');
 
   corpo.querySelectorAll('button').forEach(b => {
@@ -1226,9 +1226,9 @@ async function abrirCliente(id) {
     ? c.historico.map(h => `
         <tr>
           <td>${dataLegivel(h.inicio)}</td>
-          <td>${h.servico}</td>
-          <td>${h.barbeiro}</td>
-          <td><span class="tag">${h.status}</span></td>
+          <td>${esc(h.servico)}</td>
+          <td>${esc(h.barbeiro)}</td>
+          <td><span class="tag">${esc(h.status)}</span></td>
         </tr>`).join('')
     : '<tr><td colspan="4" class="vazio">Sem agendamentos.</td></tr>';
 
@@ -1359,7 +1359,7 @@ function limparFiltros() {
 
 async function carregarBarbeiros() {
   barbeiros = await api('/api/gestor/barbeiros');
-  const opcoes = barbeiros.map(b => `<option value="${b.id}">${b.nome}</option>`).join('');
+  const opcoes = barbeiros.map(b => `<option value="${esc(b.id)}">${esc(b.nome)}</option>`).join('');
   document.getElementById('eBarbeiro').innerHTML = opcoes;
   document.getElementById('bBarbeiro').innerHTML = opcoes;
   document.getElementById('fBarbeiro').innerHTML = '<option value="">Todos</option>' + opcoes;
@@ -1369,7 +1369,7 @@ async function carregarBarbeiros() {
 
   const servicos = await api('/api/servicos');
   document.getElementById('fServico').innerHTML = '<option value="">Todos</option>' +
-    servicos.map(s => `<option value="${s.id}">${s.nome}</option>`).join('');
+    servicos.map(s => `<option value="${esc(s.id)}">${esc(s.nome)}</option>`).join('');
 }
 
 function filtrosDaTela() {
@@ -1414,16 +1414,16 @@ async function carregarAgenda() {
   corpo.innerHTML = r.itens.map(a => `
     <tr style="${a.status === 'Cancelado' ? 'opacity:.45' : ''}">
       <td><strong>${dataLegivel(a.inicio)}</strong></td>
-      <td>${a.cliente || '-'}<br><span class="preco">${a.telefone}</span></td>
-      <td>${a.servico}<br><span class="preco">${moeda(a.precoCentavos)}</span></td>
+      <td>${a.cliente ? esc(a.cliente) : '-'}<br><span class="preco">${esc(a.telefone)}</span></td>
+      <td>${esc(a.servico)}<br><span class="preco">${moeda(a.precoCentavos)}</span></td>
       <td>${a.duracao} min</td>
-      <td>${a.barbeiro}</td>
-      <td><span class="tag">${a.origem}</span></td>
-      <td><span class="tag ${a.status === 'Cancelado' ? 'erro' : 'ok'}">${a.status}</span></td>
+      <td>${esc(a.barbeiro)}</td>
+      <td><span class="tag">${esc(a.origem)}</span></td>
+      <td><span class="tag ${a.status === 'Cancelado' ? 'erro' : 'ok'}">${esc(a.status)}</span></td>
       <td>${a.status === 'Cancelado' ? '' : `
-        <button class="btn pequeno neutro" data-mover="${a.id}"
-          data-info="${a.cliente || a.telefone} — ${a.servico}">Reagendar</button>
-        <button class="btn pequeno perigo" data-cancelar="${a.id}">Cancelar</button>`}</td>
+        <button class="btn pequeno neutro" data-mover="${esc(a.id)}"
+          data-info="${esc((a.cliente || a.telefone) + ' — ' + a.servico)}">Reagendar</button>
+        <button class="btn pequeno perigo" data-cancelar="${esc(a.id)}">Cancelar</button>`}</td>
     </tr>`).join('');
 
   corpo.querySelectorAll('[data-cancelar]').forEach(b => {
@@ -1516,9 +1516,9 @@ async function confirmarReagendamento() {
 function marcarBarbeirosDoServico(ids) {
   document.getElementById('sBarbeiros').innerHTML = barbeiros.map(b => `
     <div class="check" style="flex:none">
-      <input type="checkbox" id="sb-${b.id}" value="${b.id}"
+      <input type="checkbox" id="sb-${esc(b.id)}" value="${esc(b.id)}"
         ${ids.includes(b.id) ? 'checked' : ''}>
-      <label for="sb-${b.id}">${b.nome}</label>
+      <label for="sb-${esc(b.id)}">${esc(b.nome)}</label>
     </div>`).join('');
 }
 
@@ -1530,10 +1530,10 @@ async function carregarServicos() {
 
   corpo.innerHTML = lista.map(s => `
     <tr>
-      <td>${s.nome}<br><span class="preco">${s.barbeiroIds.length === 0
+      <td>${esc(s.nome)}<br><span class="preco">${s.barbeiroIds.length === 0
         ? 'todos os profissionais'
-        : barbeiros.filter(b => s.barbeiroIds.includes(b.id)).map(b => b.nome).join(', ')
-          || 'nenhum profissional ativo'}</span></td>
+        : esc(barbeiros.filter(b => s.barbeiroIds.includes(b.id)).map(b => b.nome).join(', ')
+          || 'nenhum profissional ativo')}</span></td>
       <td>${s.duracaoMinutos} min</td>
       <td>${moeda(s.precoCentavos)}</td>
       <td><span class="tag ${s.ativo ? 'ok' : 'erro'}">${s.ativo ? 'ativo' : 'inativo'}</span></td>
@@ -1628,11 +1628,11 @@ async function carregarBloqueios() {
 
   corpo.innerHTML = lista.map(b => `
     <tr>
-      <td>${b.barbeiro}</td>
+      <td>${esc(b.barbeiro)}</td>
       <td>${dataLegivel(b.inicio)}</td>
       <td>${dataLegivel(b.fim)}</td>
-      <td>${b.motivo || '-'}</td>
-      <td><button class="btn pequeno perigo" data-id="${b.id}">Remover</button></td>
+      <td>${b.motivo ? esc(b.motivo) : '-'}</td>
+      <td><button class="btn pequeno perigo" data-id="${esc(b.id)}">Remover</button></td>
     </tr>`).join('');
 
   corpo.querySelectorAll('button').forEach(b => {
@@ -1766,12 +1766,12 @@ async function carregarUsuarios() {
 
     return `
     <tr>
-      <td>${u.nome}${u.precisaTrocarSenha ? '<br><span class="tag erro">senha provisoria</span>' : ''}</td>
-      <td>${u.email}</td>
-      <td><span class="tag">${u.perfil}</span></td>
-      <td>${u.perfil === 'Admin' ? '<span class="preco">tudo</span>' : (perms.join(', ') || '<span class="preco">nenhuma</span>')}</td>
+      <td>${esc(u.nome)}${u.precisaTrocarSenha ? '<br><span class="tag erro">senha provisoria</span>' : ''}</td>
+      <td>${esc(u.email)}</td>
+      <td><span class="tag">${esc(u.perfil)}</span></td>
+      <td>${u.perfil === 'Admin' ? '<span class="preco">tudo</span>' : (esc(perms.join(', ')) || '<span class="preco">nenhuma</span>')}</td>
       <td><span class="tag ${u.ativo ? 'ok' : 'erro'}">${u.ativo ? 'ativo' : 'inativo'}</span></td>
-      <td><button class="btn pequeno neutro" data-id="${u.id}">Editar</button></td>
+      <td><button class="btn pequeno neutro" data-id="${esc(u.id)}">Editar</button></td>
     </tr>`;
   }).join('');
 
@@ -1854,7 +1854,7 @@ async function carregarPermissoes() {
   const d = await api('/api/admin/permissoes');
 
   document.getElementById('permCabecalho').innerHTML =
-    '<th>Funcionario</th><th>Perfil</th>' + d.permissoes.map(p => `<th>${p.nome}</th>`).join('');
+    '<th>Funcionario</th><th>Perfil</th>' + d.permissoes.map(p => `<th>${esc(p.nome)}</th>`).join('');
 
   document.getElementById('permCorpo').innerHTML = d.pessoas.map(p => {
     const celulas = d.permissoes.map(perm => {
@@ -1862,13 +1862,13 @@ async function carregarPermissoes() {
       if (perm.gestorTemSempre && p.perfil === 'Gestor')
         return '<td><span class="tag ok">por perfil</span></td>';
 
-      return `<td><input type="checkbox" data-pessoa="${p.id}" data-chave="${perm.chave}"
+      return `<td><input type="checkbox" data-pessoa="${esc(p.id)}" data-chave="${esc(perm.chave)}"
         ${p.concedidas[perm.chave] ? 'checked' : ''}></td>`;
     }).join('');
 
     return `<tr>
-      <td>${p.nome}<br><span class="preco">${p.email}</span></td>
-      <td><span class="tag">${p.perfil}</span></td>${celulas}</tr>`;
+      <td>${esc(p.nome)}<br><span class="preco">${esc(p.email)}</span></td>
+      <td><span class="tag">${esc(p.perfil)}</span></td>${celulas}</tr>`;
   }).join('');
 
   document.querySelectorAll('#permCorpo input[type=checkbox]').forEach(c => {
@@ -1891,7 +1891,7 @@ async function carregarPermissoes() {
   });
 
   document.getElementById('permLegenda').innerHTML = d.permissoes.map(p =>
-    `<tr><th style="width:24%">${p.nome}</th><td>${p.descricao}</td></tr>`).join('');
+    `<tr><th style="width:24%">${esc(p.nome)}</th><td>${esc(p.descricao)}</td></tr>`).join('');
 }
 
 function diasAtras(n) { const d = new Date(); d.setDate(d.getDate() + n); return iso(d); }
@@ -1938,7 +1938,7 @@ function barrasH(el, itens, formatar) {
   el.innerHTML = itens.length
     ? itens.map(i => `
       <div class="barra-linha">
-        <span class="barra-nome" title="${i.nome}">${i.nome}</span>
+        <span class="barra-nome" title="${esc(i.nome)}">${esc(i.nome)}</span>
         <span class="barra-trilho"><span class="barra-fill" style="width:${Math.max(1.5, i.valor * 100 / max)}%"></span></span>
         <span class="barra-val">${formatar(i.valor)}</span>
       </div>`).join('')
@@ -2052,7 +2052,7 @@ async function carregarDashboard() {
     d.porBarbeiro.map(b => ({ nome: b.nome, valor: b.receitaCentavos })), moeda);
 
   document.getElementById('dBarbeirosTab').innerHTML = d.porBarbeiro.length
-    ? d.porBarbeiro.map(b => `<tr><td>${b.nome}</td><td>${b.atendimentos}</td>
+    ? d.porBarbeiro.map(b => `<tr><td>${esc(b.nome)}</td><td>${b.atendimentos}</td>
         <td>${moeda(b.ticketMedioCentavos)}</td><td>${b.ocupacaoPct}%</td></tr>`).join('')
     : '<tr><td colspan="4" class="vazio">Sem atendimentos.</td></tr>';
 
@@ -2060,7 +2060,7 @@ async function carregarDashboard() {
     d.porServico.map(s => ({ nome: s.nome, valor: s.quantidade })), v => v + 'x');
 
   document.getElementById('dServicosTab').innerHTML = d.porServico.length
-    ? d.porServico.map(s => `<tr><td>${s.nome}</td><td>${s.quantidade}</td>
+    ? d.porServico.map(s => `<tr><td>${esc(s.nome)}</td><td>${s.quantidade}</td>
         <td>${moeda(s.receitaCentavos)}</td><td>${s.participacaoPct}%</td></tr>`).join('')
     : '<tr><td colspan="4" class="vazio">Sem atendimentos.</td></tr>';
 
@@ -2077,7 +2077,7 @@ async function carregarDashboard() {
     </div>`).join('');
 
   document.getElementById('dClientes').innerHTML = d.topClientes.length
-    ? d.topClientes.map(c => `<tr><td>${c.nome}<br><span class="preco">${c.telefone}</span></td>
+    ? d.topClientes.map(c => `<tr><td>${esc(c.nome)}<br><span class="preco">${esc(c.telefone)}</span></td>
         <td>${c.atendimentos}</td><td>${moeda(c.receitaCentavos)}</td></tr>`).join('')
     : '<tr><td colspan="3" class="vazio">Sem clientes no periodo.</td></tr>';
 
@@ -2096,7 +2096,7 @@ async function carregarDashboard() {
     + moeda(prod.valorEmEstoqueCentavos) + '.';
 
   document.getElementById('dProdutos').innerHTML = prod.itens.length
-    ? prod.itens.map(p => `<tr><td>${p.nome}${p.ativo ? '' : ' <span class="tag erro">inativo</span>'}</td>
+    ? prod.itens.map(p => `<tr><td>${esc(p.nome)}${p.ativo ? '' : ' <span class="tag erro">inativo</span>'}</td>
         <td>${p.estoque}</td><td>${moeda(p.precoCentavos)}</td>
         <td>${moeda(p.valorEstoqueCentavos)}</td></tr>`).join('')
     : '<tr><td colspan="4" class="vazio">Nenhum produto cadastrado.</td></tr>';

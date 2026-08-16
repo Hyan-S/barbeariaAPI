@@ -25,6 +25,10 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<FilaDeMensagens>();
 builder.Services.AddHostedService<ProcessadorDeMensagens>();
 
+// Guarda o contador de tentativas de login por conta (defesa contra brute-force
+// que nao depende do IP — o limite por IP e burlavel forjando X-Forwarded-For).
+builder.Services.AddMemoryCache();
+
 var jwtSecret = builder.Configuration["Jwt:Secret"]
                 ?? throw new InvalidOperationException("Jwt:Secret nao configurado");
 

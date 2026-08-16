@@ -7,9 +7,12 @@
 <title>Entrar</title>
 <script>document.documentElement.dataset.tema =
   localStorage.getItem('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro');</script>
-<link rel="stylesheet" href="app.css?v=202608121530">
+<link rel="stylesheet" href="app.css?v=202608161300">
 <style>
   body {
+    /* 100vh e a reserva para navegador antigo; 100dvh acompanha a barra de
+       endereco aparecendo e sumindo no celular, sem cortar o conteudo. */
+    min-height: 100vh;
     min-height: 100dvh;
     display: grid;
     grid-template-columns: 1.05fr 1fr;
@@ -70,7 +73,12 @@
   .pontos svg { width: 17px; height: 17px; stroke: #c9a15b; flex: none; }
   .rodape { font-size: 13px; color: #6d7482; margin: 0; }
 
-  .painel { display: grid; place-items: center; padding: 44px 28px; position: relative; }
+  .painel {
+    display: grid;
+    place-items: center;
+    padding: 44px 28px calc(44px + env(safe-area-inset-bottom));
+    position: relative;
+  }
   .canto { position: absolute; top: 18px; right: 18px; }
   .caixa { width: 100%; max-width: 372px; }
   .caixa h2 { font-size: 25px; margin: 0 0 6px; letter-spacing: -.015em; }
@@ -162,7 +170,17 @@
     .pontos li { font-size: 13.5px; }
     .rodape { margin-top: 2px; }
 
-    .painel { padding: 46px 22px 44px; align-items: start; }
+    /* Nada de align-items:start aqui. Fixado no topo, o formulario deixava um
+       vazio grande embaixo nas telas altas e estourava a viewport nas baixas —
+       centralizado, ele divide a sobra e cabe em tela curta. */
+    .painel {
+      padding: 26px 22px calc(30px + env(safe-area-inset-bottom));
+      align-items: center;
+    }
+
+    .caixa h2 { font-size: 23px; }
+    .caixa .sub { margin-bottom: 20px; }
+    .separa { margin: 18px 0 14px; }
     .canto { top: 12px; right: 14px; }
   }
 
@@ -170,7 +188,7 @@
     .marca { padding: 20px 18px 26px; gap: 16px; }
     .chamada h1 { font-size: 23px; }
     .pontos { margin-top: 14px; }
-    .painel { padding: 44px 18px 40px; }
+    .painel { padding: 22px 18px calc(26px + env(safe-area-inset-bottom)); }
   }
 
   @media (max-width: 860px) and (max-height: 700px) {
@@ -204,7 +222,7 @@
     </ul>
   </div>
 
-  <p class="rodape">Feito para barbearia pequena que odeia caderninho.</p>
+  <p class="rodape">Feito para barbearias que odeiam planilhas.</p>
 </section>
 
 <main class="painel">
@@ -256,7 +274,7 @@
   </div>
 </main>
 
-<script src="app.js?v=202608121530"></script>
+<script src="app.js?v=202608161300"></script>
 <script>
 if (Auth.token) location.replace('painel.html');
 

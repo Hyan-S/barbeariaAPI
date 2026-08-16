@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Barbearia.Application.Acesso;
 using Barbearia.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Barbearia.Api.Endpoints;
 
@@ -10,20 +11,50 @@ public static class AuthEndpoints
     public record LoginRequest(string Email, string Senha);
     public record TrocaSenhaRequest(string SenhaAtual, string NovaSenha);
 
+    // Limite de tentativas de login POR CONTA. O rate limiter por IP (politica
+    // "login") e a primeira barreira, mas ele depende do X-Forwarded-For, que um
+    // atacante pode forjar/rotacionar para zerar a contagem. Este limite por email
+    // fecha esse furo: nao importa de quantos IPs venham, uma conta so aceita
+    // MaxFalhasPorConta senhas erradas dentro da JanelaPorConta. So conta falhas;
+    // um login bem-sucedido limpa o contador.
+    private const int MaxFalhasPorConta = 10;
+    private static readonly TimeSpan JanelaPorConta = TimeSpan.FromMinutes(15);
+
     public static void MapAuth(this IEndpointRouteBuilder app)
     {
         var g = app.MapGroup("/api/auth");
 
         g.MapPost("/login", async (
-            LoginRequest req, AppDbContext db, IHashDeSenha hash, IServicoDeToken tokens) =>
+            LoginRequest req, AppDbContext db, IHashDeSenha hash, IServicoDeToken tokens,
+            IMemoryCache cache) =>
         {
             var email = (req.Email ?? "").Trim().ToLowerInvariant();
+
+            var chaveTentativas = "login-falhas:" + email;
+            var falhas = cache.Get<int[]>(chaveTentativas);
+            if (falhas is not null && falhas[0] >= MaxFalhasPorConta)
+                return Results.Json(
+                    new { erro = "Muitas tentativas para esta conta. Aguarde alguns minutos." },
+                    statusCode: 429);
 
             var usuario = await db.Barbeiros
                 .FirstOrDefaultAsync(x => x.Email.ToLower() == email && x.Ativo);
 
             if (usuario is null || !hash.Conferir(req.Senha ?? "", usuario.SenhaHash))
+            {
+                // Caixa mutavel: incrementar sem recriar a entrada preserva a
+                // expiracao da janela (contada desde a primeira falha).
+                var contador = cache.GetOrCreate(chaveTentativas, e =>
+                {
+                    e.AbsoluteExpirationRelativeToNow = JanelaPorConta;
+                    return new int[1];
+                })!;
+                contador[0]++;
+
                 return Results.Json(new { erro = "E-mail ou senha invalidos" }, statusCode: 401);
+            }
+
+            cache.Remove(chaveTentativas);
 
             if (hash.PrecisaRegerar(usuario.SenhaHash))
             {

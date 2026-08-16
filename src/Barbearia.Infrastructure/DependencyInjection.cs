@@ -47,7 +47,10 @@ public static class DependencyInjection
 
         services.AddHttpClient<IWhatsAppClient, WhatsAppClient>(http =>
         {
-            http.BaseAddress = new Uri("https://graph.facebook.com/");
+            // Em producao e sempre a Graph API da Meta. So e configuravel para que o
+            // teste local possa apontar para um servidor falso e conferir o que o bot
+            // responde sem depender da Meta entregar a mensagem.
+            http.BaseAddress = new Uri(config["WhatsApp:BaseUrl"] ?? "https://graph.facebook.com/");
             http.Timeout = TimeSpan.FromSeconds(15);
         });
 

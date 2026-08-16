@@ -7,9 +7,13 @@
 <title>Agendar horario</title>
 <script>document.documentElement.dataset.tema =
   localStorage.getItem('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro');</script>
-<link rel="stylesheet" href="app.css?v=202608121530">
+<link rel="stylesheet" href="app.css?v=202608161300">
 <style>
-  main { max-width: 580px; }
+  /* Cada etapa mostra um card baixo, entao sobrava uma faixa vazia enorme no
+     fim da tela. Em coluna flex, margin-block:auto centraliza o card na sobra
+     e vira 0 sozinho quando o conteudo passa da altura — nada fica cortado. */
+  body { display: flex; flex-direction: column; }
+  main { max-width: 580px; width: 100%; margin-inline: auto; margin-block: auto; }
   .trilha { display: flex; align-items: center; gap: 6px; margin-bottom: 22px; }
   .trilha .no { display: flex; align-items: center; gap: 7px; flex: none; }
 
@@ -183,7 +187,7 @@
   </div>
 </main>
 
-<script src="app.js?v=202608121530"></script>
+<script src="app.js?v=202608161300"></script>
 <script>
 const msg = document.getElementById('msg');
 const token = new URLSearchParams(location.search).get('t');
@@ -240,8 +244,8 @@ async function iniciar() {
   servicos = await api('/api/servicos');
 
   document.getElementById('servicos').innerHTML = servicos.map(s => `
-    <button data-id="${s.id}">
-      <span><strong>${s.nome}</strong><br><span class="preco">${s.duracaoMinutos} min</span></span>
+    <button data-id="${esc(s.id)}">
+      <span><strong>${esc(s.nome)}</strong><br><span class="preco">${s.duracaoMinutos} min</span></span>
       <span class="preco">${moeda(s.precoCentavos)}</span>
     </button>`).join('');
 
@@ -275,8 +279,8 @@ async function carregarProfissionais() {
   const opcoes = equipe.length === 1 ? equipe : [{ id: '', nome: 'Qualquer um disponivel' }, ...equipe];
 
   box.innerHTML = opcoes.map(p => `
-    <button data-id="${p.id}">
-      <span><strong>${p.nome}</strong>${p.id === ''
+    <button data-id="${esc(p.id)}">
+      <span><strong>${esc(p.nome)}</strong>${p.id === ''
         ? '<br><span class="preco">Mostra todos os horarios livres</span>' : ''}</span>
     </button>`).join('');
 
@@ -355,8 +359,8 @@ async function carregarSessao() {
       document.getElementById('cardMeus').classList.remove('oculto');
       document.getElementById('meus').innerHTML = sessao.agendamentos.map(a => `
         <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--linha)">
-          <span><strong>${dataLegivel(a.inicio)}</strong><br><span class="preco">${a.servico} com ${a.barbeiro}</span></span>
-          <button class="btn pequeno perigo" data-id="${a.id}">Cancelar</button>
+          <span><strong>${dataLegivel(a.inicio)}</strong><br><span class="preco">${esc(a.servico)} com ${esc(a.barbeiro)}</span></span>
+          <button class="btn pequeno perigo" data-id="${esc(a.id)}">Cancelar</button>
         </div>`).join('');
 
       document.querySelectorAll('#meus button').forEach(b => {
@@ -423,8 +427,8 @@ function resumoHtml(inicioIso, barbeiroConfirmado) {
     || 'Qualquer um disponivel';
 
   return `
-    <div><span class="rot">Servico</span><span class="val">${servicoEscolhido.nome}</span></div>
-    <div><span class="rot">Profissional</span><span class="val">${profissional}</span></div>
+    <div><span class="rot">Servico</span><span class="val">${esc(servicoEscolhido.nome)}</span></div>
+    <div><span class="rot">Profissional</span><span class="val">${esc(profissional)}</span></div>
     <div><span class="rot">Quando</span><span class="val">${quando}</span></div>
     <div><span class="rot">Duracao</span><span class="val">${servicoEscolhido.duracaoMinutos} min</span></div>
     <div><span class="rot">Valor</span><span class="val">${moeda(servicoEscolhido.precoCentavos)}</span></div>`;

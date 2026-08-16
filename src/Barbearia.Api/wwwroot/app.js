@@ -245,6 +245,20 @@ function aviso(elemento, mensagem, tipo = 'erro') {
     elemento._timer = setTimeout(() => { elemento.className = 'oculto'; }, 3000);
 }
 
+// Escapa texto antes de injetar via innerHTML. Todo dado vindo do servidor
+// (nome de cliente, observacao, e-mail, etc.) passa por aqui: alguem pode se
+// cadastrar sem login com um nome tipo "<img onerror=...>" e o painel do admin
+// executaria o script. Numeros e nulos viram string segura.
+function esc(valor) {
+  if (valor === null || valor === undefined) return '';
+  return String(valor)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
 function moeda(centavos) {
   return (centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
@@ -278,7 +292,7 @@ function montarTopo(titulo, comMenu = false) {
   return `${comMenu ? botaoMenu() : ''}
     <div class="marca-topo"><span class="marca-mark">${MARCA_SVG}</span><h1>${titulo}</h1></div>
     <span class="espaco"></span>
-    <span class="quem">${nome} &middot; ${perfil}</span>
+    <span class="quem">${esc(nome)} &middot; ${esc(perfil)}</span>
     ${botaoTema()}
     <button class="btn pequeno neutro" onclick="Auth.sair()">Sair</button>`;
 }
@@ -368,3 +382,23 @@ function botaoMenu() {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
       <path d="M3 6h18M3 12h18M3 18h18"/></svg></button>`;
 }
+
+// Publica a altura real do cabecalho em --altura-topo. O topo tem flex-wrap e
+// quebra em duas linhas em tela estreita; com a altura chutada no CSS a lateral
+// fixa desalinha e sobra (ou falta) uma faixa no fim do painel. Roda de novo ao
+// girar o aparelho e sempre que o topo mudar de tamanho.
+function medirTopo() {
+  const topo = document.querySelector('header.topo');
+  if (!topo) return;
+  document.documentElement.style.setProperty('--altura-topo', `${topo.offsetHeight}px`);
+}
+
+addEventListener('DOMContentLoaded', () => {
+  medirTopo();
+
+  const topo = document.querySelector('header.topo');
+  if (topo && 'ResizeObserver' in window) new ResizeObserver(medirTopo).observe(topo);
+});
+
+addEventListener('resize', medirTopo);
+addEventListener('orientationchange', medirTopo);

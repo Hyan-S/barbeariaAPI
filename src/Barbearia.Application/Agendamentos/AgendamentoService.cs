@@ -143,6 +143,21 @@ public class AgendamentoService(
         return true;
     }
 
+    // Limite da coluna clientes.Nome. Um nome maior que isso estouraria o insert
+    // (e viraria HTTP 500 num endpoint publico). Trunca e remove caracteres de
+    // controle antes de salvar; o escape de HTML fica a cargo de quem exibe.
+    private const int MaxNome = 120;
+
+    private static string? LimparNome(string? nome)
+    {
+        if (string.IsNullOrWhiteSpace(nome)) return null;
+
+        var limpo = new string(nome.Where(c => !char.IsControl(c)).ToArray()).Trim();
+        if (limpo.Length == 0) return null;
+
+        return limpo.Length <= MaxNome ? limpo : limpo[..MaxNome];
+    }
+
     public async Task<Cliente> ObterOuCriarClienteAsync(
         string telefoneBruto,
         string? nome,
@@ -151,18 +166,20 @@ public class AgendamentoService(
         var telefone = TelefoneBr.Normalizar(telefoneBruto)
                        ?? throw new ArgumentException("Telefone invalido", nameof(telefoneBruto));
 
+        var nomeLimpo = LimparNome(nome);
+
         var cliente = await db.Clientes.FirstOrDefaultAsync(c => c.Telefone == telefone, ct);
         if (cliente is not null)
         {
-            if (string.IsNullOrWhiteSpace(cliente.Nome) && !string.IsNullOrWhiteSpace(nome))
+            if (string.IsNullOrWhiteSpace(cliente.Nome) && nomeLimpo is not null)
             {
-                cliente.Nome = nome;
+                cliente.Nome = nomeLimpo;
                 await db.SaveChangesAsync(ct);
             }
             return cliente;
         }
 
-        cliente = new Cliente { Telefone = telefone, Nome = nome ?? string.Empty };
+        cliente = new Cliente { Telefone = telefone, Nome = nomeLimpo ?? string.Empty };
         db.Clientes.Add(cliente);
 
         try
