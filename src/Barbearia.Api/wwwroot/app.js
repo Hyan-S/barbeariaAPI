@@ -275,6 +275,18 @@ function dataLegivel(iso) {
   });
 }
 
+// Na agenda a hora e a informacao principal e a data fica em segundo plano,
+// entao as duas partes vem separadas em vez da string unica de dataLegivel.
+function soHora(iso) {
+  return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function soDia(iso) {
+  return new Date(iso).toLocaleDateString('pt-BR', {
+    weekday: 'short', day: '2-digit', month: '2-digit'
+  });
+}
+
 const DIAS = ['Domingo', 'Segunda', 'Terca', 'Quarta', 'Quinta', 'Sexta', 'Sabado'];
 
 const MARCA_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">

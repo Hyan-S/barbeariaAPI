@@ -7,7 +7,7 @@
 <title>Painel</title>
 <script>document.documentElement.dataset.tema =
   localStorage.getItem('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro');</script>
-<link rel="stylesheet" href="app.css?v=202608161300">
+<link rel="stylesheet" href="app.css?v=202608161600">
 </head>
 <body>
 <header class="topo" id="topo"></header>
@@ -28,26 +28,39 @@
 
       <div class="passo">
         <h3>1. Cliente</h3>
-        <div class="linha">
-          <div class="campo">
-            <label for="agBusca">Buscar cliente ja cadastrado</label>
-            <input id="agBusca" placeholder="Nome ou telefone">
-          </div>
-          <div class="campo" style="display:flex;align-items:flex-end">
-            <button class="btn neutro" id="agBuscar">Buscar</button>
-          </div>
-        </div>
-        <div id="agResultado" class="opcoes" style="margin-bottom:12px"></div>
 
-        <div class="linha">
-          <div class="campo">
-            <label for="agNome">Ou cadastre na hora — nome</label>
-            <input id="agNome" placeholder="Nome do cliente">
+        <div class="abas" id="abasCliente" role="tablist">
+          <button type="button" class="ativa" data-aba="existente" role="tab"
+                  aria-selected="true" aria-controls="abaExistente">Cliente cadastrado</button>
+          <button type="button" data-aba="novo" role="tab"
+                  aria-selected="false" aria-controls="abaNovo">Novo cadastro</button>
+        </div>
+
+        <div id="abaExistente" role="tabpanel">
+          <div class="linha">
+            <div class="campo">
+              <label for="agBusca">Buscar por nome ou telefone</label>
+              <input id="agBusca" placeholder="Nome ou telefone">
+            </div>
+            <div class="campo" style="display:flex;align-items:flex-end">
+              <button class="btn neutro" id="agBuscar">Buscar</button>
+            </div>
           </div>
-          <div class="campo">
-            <label for="agTelefone">Telefone com DDD</label>
-            <input id="agTelefone" inputmode="numeric" placeholder="11987654321">
+          <div id="agResultado" class="opcoes" style="margin-bottom:12px"></div>
+        </div>
+
+        <div id="abaNovo" class="oculto" role="tabpanel">
+          <div class="linha">
+            <div class="campo">
+              <label for="agNome">Nome</label>
+              <input id="agNome" placeholder="Nome do cliente">
+            </div>
+            <div class="campo">
+              <label for="agTelefone">Telefone com DDD</label>
+              <input id="agTelefone" inputmode="numeric" placeholder="11987654321">
+            </div>
           </div>
+          <p class="ajuda">O cadastro e criado junto com o agendamento.</p>
         </div>
       </div>
 
@@ -235,78 +248,92 @@
     <div class="card">
       <h2>Agenda</h2>
 
-      <div class="periodos" id="periodos"></div>
-
-      <div class="linha" style="margin-bottom:12px">
-        <div class="campo" style="margin:0">
-          <label for="fDe">De</label>
-          <input type="date" id="fDe">
-        </div>
-        <div class="campo" style="margin:0">
-          <label for="fAte">Ate</label>
-          <input type="date" id="fAte">
-        </div>
-        <div class="campo" style="margin:0;display:flex;align-items:flex-end;gap:8px">
-          <button class="btn neutro pequeno" id="ontem">&lt;</button>
-          <button class="btn neutro pequeno" id="amanha">&gt;</button>
-        </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+        <button class="btn neutro pequeno" id="ontem" aria-label="Periodo anterior">&lt;</button>
+        <button class="btn neutro pequeno" id="amanha" aria-label="Proximo periodo">&gt;</button>
+        <div class="periodos" id="periodos" style="margin:0"></div>
       </div>
 
-      <div class="linha" style="margin-bottom:12px">
-        <div class="campo" style="margin:0">
-          <label for="fBusca">Cliente (nome ou telefone)</label>
-          <input id="fBusca" placeholder="Hyan ou 11987654321">
-        </div>
-        <div class="campo" style="margin:0">
-          <label for="fBarbeiro">Barbeiro</label>
-          <select id="fBarbeiro"><option value="">Todos</option></select>
-        </div>
-        <div class="campo" style="margin:0">
-          <label for="fServico">Servico</label>
-          <select id="fServico"><option value="">Todos</option></select>
-        </div>
-      </div>
+      <details class="filtros" id="filtros">
+        <summary>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 5h18l-7 8v6l-4 2v-8z"/>
+          </svg>
+          <span>Filtros</span>
+          <span class="tag" id="filtrosResumo">periodo de hoje</span>
+          <span class="seta">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
+          </span>
+        </summary>
 
-      <div class="linha" style="margin-bottom:14px">
-        <div class="campo" style="margin:0">
-          <label for="fStatus">Situacao</label>
-          <select id="fStatus">
-            <option value="">Todas</option>
-            <option value="Confirmado">Confirmado</option>
-            <option value="Concluido">Concluido</option>
-            <option value="Cancelado">Cancelado</option>
-          </select>
-        </div>
-        <div class="campo" style="margin:0">
-          <label for="fOrigem">Origem</label>
-          <select id="fOrigem">
-            <option value="">Todas</option>
-            <option value="Web">Site</option>
-            <option value="WhatsApp">WhatsApp</option>
-            <option value="Painel">Painel</option>
-          </select>
-        </div>
-        <div class="campo" style="margin:0">
-          <label for="fHoraDe">Das (hora)</label>
-          <input type="number" id="fHoraDe" min="0" max="23" placeholder="0">
-        </div>
-        <div class="campo" style="margin:0">
-          <label for="fHoraAte">Ate (hora)</label>
-          <input type="number" id="fHoraAte" min="0" max="23" placeholder="23">
-        </div>
-      </div>
+        <div class="filtros-corpo">
+          <div class="linha">
+            <div class="campo">
+              <label for="fDe">De</label>
+              <input type="date" id="fDe">
+            </div>
+            <div class="campo">
+              <label for="fAte">Ate</label>
+              <input type="date" id="fAte">
+            </div>
+          </div>
 
-      <div style="display:flex;gap:8px;margin-bottom:16px">
-        <button class="btn" id="aplicarFiltro">Filtrar</button>
-        <button class="btn neutro" id="limparFiltro">Limpar</button>
-      </div>
+          <div class="linha">
+            <div class="campo">
+              <label for="fBusca">Cliente (nome ou telefone)</label>
+              <input id="fBusca" placeholder="Hyan ou 11987654321">
+            </div>
+            <div class="campo">
+              <label for="fBarbeiro">Barbeiro</label>
+              <select id="fBarbeiro"><option value="">Todos</option></select>
+            </div>
+            <div class="campo">
+              <label for="fServico">Servico</label>
+              <select id="fServico"><option value="">Todos</option></select>
+            </div>
+          </div>
+
+          <div class="linha">
+            <div class="campo">
+              <label for="fStatus">Situacao</label>
+              <select id="fStatus">
+                <option value="">Todas</option>
+                <option value="Confirmado">Confirmado</option>
+                <option value="Concluido">Concluido</option>
+                <option value="Cancelado">Cancelado</option>
+              </select>
+            </div>
+            <div class="campo">
+              <label for="fOrigem">Origem</label>
+              <select id="fOrigem">
+                <option value="">Todas</option>
+                <option value="Web">Site</option>
+                <option value="WhatsApp">WhatsApp</option>
+                <option value="Painel">Painel</option>
+              </select>
+            </div>
+            <div class="campo">
+              <label for="fHoraDe">Das (hora)</label>
+              <input type="number" id="fHoraDe" min="0" max="23" placeholder="0">
+            </div>
+            <div class="campo">
+              <label for="fHoraAte">Ate (hora)</label>
+              <input type="number" id="fHoraAte" min="0" max="23" placeholder="23">
+            </div>
+          </div>
+
+          <button class="btn neutro pequeno" id="limparFiltro" style="margin-bottom:12px">Limpar filtros</button>
+        </div>
+      </details>
 
       <div id="resumoAgenda" class="resumo-agenda oculto"></div>
 
       <div class="rolagem"><table>
         <thead><tr>
-          <th>Quando</th><th>Cliente</th><th>Servico</th><th>Tempo</th>
-          <th>Barbeiro</th><th>Origem</th><th>Situacao</th><th></th>
+          <th>Horario</th><th>Cliente</th><th>Servico</th><th class="num">Valor</th>
+          <th>Barbeiro</th><th>Situacao</th><th></th>
         </tr></thead>
         <tbody id="listaAgenda"></tbody>
       </table></div>
@@ -812,7 +839,7 @@
 </main>
 </div>
 
-<script src="app.js?v=202608161300"></script>
+<script src="app.js?v=202608161600"></script>
 <script>
 const msg = document.getElementById('msg');
 let barbeiros = [];
@@ -874,9 +901,8 @@ function iniciar() {
   montarPeriodos();
   document.getElementById('ontem').onclick = () => moverDia(-1);
   document.getElementById('amanha').onclick = () => moverDia(1);
-  document.getElementById('aplicarFiltro').onclick = carregarAgenda;
   document.getElementById('limparFiltro').onclick = limparFiltros;
-  document.getElementById('fBusca').onkeydown = e => { if (e.key === 'Enter') carregarAgenda(); };
+  ligarFiltrosDinamicos();
   document.getElementById('reData').onchange = carregarGradeReagendar;
   document.getElementById('reConfirmar').onclick = confirmarReagendamento;
   document.getElementById('reCancelar').onclick = fecharReagendar;
@@ -915,6 +941,14 @@ function iniciar() {
   if (Auth.pode(GESTAO)) {
     document.getElementById('agBuscar').onclick = buscarClienteParaAgendar;
     document.getElementById('agBusca').onkeydown = e => { if (e.key === 'Enter') buscarClienteParaAgendar(); };
+
+    document.querySelectorAll('#abasCliente button').forEach(b =>
+      b.onclick = () => trocarAbaCliente(b.dataset.aba));
+
+    // Sem isto o botao so reagia ao escolher o horario: quem digitava o
+    // telefone depois de marcar o slot ficava com o botao travado.
+    ['agNome', 'agTelefone'].forEach(id =>
+      document.getElementById(id).oninput = atualizarBotaoAgendar);
     document.getElementById('agData').onchange = carregarHorariosPainel;
     document.getElementById('agServico').onchange = carregarHorariosPainel;
     document.getElementById('agBarbeiro').onchange = carregarHorariosPainel;
@@ -944,6 +978,31 @@ function iniciar() {
 let agCliente = null;
 let agSlot = null;
 
+// Abas do passo 1. Trocar de aba zera o que ficou preenchido na outra, senao
+// daria para mandar cliente escolhido e cadastro novo na mesma requisicao. A
+// gravacao em si (confirmarPeloPainel) continua exatamente como era.
+function trocarAbaCliente(qual) {
+  document.querySelectorAll('#abasCliente button').forEach(b => {
+    const ativa = b.dataset.aba === qual;
+    b.classList.toggle('ativa', ativa);
+    b.setAttribute('aria-selected', ativa);
+  });
+
+  document.getElementById('abaExistente').classList.toggle('oculto', qual !== 'existente');
+  document.getElementById('abaNovo').classList.toggle('oculto', qual !== 'novo');
+
+  if (qual === 'novo') {
+    agCliente = null;
+    document.getElementById('agBusca').value = '';
+    document.getElementById('agResultado').innerHTML = '';
+  } else {
+    document.getElementById('agNome').value = '';
+    document.getElementById('agTelefone').value = '';
+  }
+
+  atualizarBotaoAgendar();
+}
+
 async function prepararNovoAgendamento() {
   if (document.getElementById('agServico').options.length > 0) return;
 
@@ -967,7 +1026,7 @@ async function buscarClienteParaAgendar() {
   const box = document.getElementById('agResultado');
 
   if (lista.length === 0) {
-    box.innerHTML = '<p class="ajuda">Ninguem encontrado. Cadastre abaixo com nome e telefone.</p>';
+    box.innerHTML = '<p class="ajuda">Ninguem encontrado. Use a aba "Novo cadastro".</p>';
     return;
   }
 
@@ -1055,6 +1114,7 @@ async function confirmarPeloPainel() {
     agSlot = null;
     ['agBusca', 'agNome', 'agTelefone', 'agObs'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('agResultado').innerHTML = '';
+    trocarAbaCliente('existente');
     carregarHorariosPainel();
     carregarAgenda();
   } catch (e) {
@@ -1346,8 +1406,7 @@ function moverDia(delta) {
   document.getElementById('fDe').value = iso(de);
   document.getElementById('fAte').value = iso(ate);
 
-  document.querySelectorAll('#periodos button').forEach(x => x.classList.remove('ativa'));
-  document.querySelector('#periodos button[data-p="custom"]').classList.add('ativa');
+  marcarPeriodoPersonalizado();
   carregarAgenda();
 }
 
@@ -1355,6 +1414,63 @@ function limparFiltros() {
   ['fBusca', 'fHoraDe', 'fHoraAte'].forEach(id => document.getElementById(id).value = '');
   ['fBarbeiro', 'fServico', 'fStatus', 'fOrigem'].forEach(id => document.getElementById(id).value = '');
   document.querySelector('#periodos button[data-p="hoje"]').click();
+}
+
+// Filtros dinamicos: nao ha mais botao "Filtrar". Select e data recarregam na
+// hora; os campos digitados esperam a digitacao parar, senao seria uma chamada
+// por tecla.
+function ligarFiltrosDinamicos() {
+  let espera;
+
+  const daHora = () => { clearTimeout(espera); carregarAgenda(); };
+  const depoisDeDigitar = () => { clearTimeout(espera); espera = setTimeout(carregarAgenda, 400); };
+
+  ['fBarbeiro', 'fServico', 'fStatus', 'fOrigem'].forEach(id =>
+    document.getElementById(id).onchange = daHora);
+
+  // Mexer nas datas na mao sai de qualquer periodo pronto.
+  ['fDe', 'fAte'].forEach(id => document.getElementById(id).onchange = () => {
+    marcarPeriodoPersonalizado();
+    daHora();
+  });
+
+  ['fBusca', 'fHoraDe', 'fHoraAte'].forEach(id =>
+    document.getElementById(id).oninput = depoisDeDigitar);
+
+  document.getElementById('fBusca').onkeydown = e => { if (e.key === 'Enter') daHora(); };
+}
+
+function marcarPeriodoPersonalizado() {
+  document.querySelectorAll('#periodos button').forEach(x => x.classList.remove('ativa'));
+  document.querySelector('#periodos button[data-p="custom"]').classList.add('ativa');
+}
+
+// Descreve os filtros ativos no cabecalho do painel fechado, para dar pra saber
+// o que esta aplicado sem abrir.
+function resumirFiltros() {
+  const curta = v => v ? v.split('-').reverse().slice(0, 2).join('/') : '';
+  const texto = id => document.getElementById(id).value.trim();
+  const rotulo = id => {
+    const s = document.getElementById(id);
+    return s.value ? s.options[s.selectedIndex].text : '';
+  };
+
+  const partes = [];
+  const chip = document.querySelector('#periodos button.ativa');
+  const de = texto('fDe'), ate = texto('fAte');
+
+  if (chip && chip.dataset.p !== 'custom') partes.push(chip.textContent.toLowerCase());
+  else if (de || ate) partes.push(de === ate ? curta(de) : `${curta(de)} a ${curta(ate)}`);
+
+  if (texto('fBusca')) partes.push(`"${texto('fBusca')}"`);
+  ['fBarbeiro', 'fServico', 'fStatus', 'fOrigem'].forEach(id => {
+    if (rotulo(id)) partes.push(rotulo(id));
+  });
+
+  const hd = texto('fHoraDe'), ha = texto('fHoraAte');
+  if (hd || ha) partes.push(`${hd || 0}h as ${ha || 23}h`);
+
+  document.getElementById('filtrosResumo').textContent = partes.join(' · ') || 'nenhum';
 }
 
 async function carregarBarbeiros() {
@@ -1392,6 +1508,8 @@ function filtrosDaTela() {
 }
 
 async function carregarAgenda() {
+  resumirFiltros();
+
   const r = await api('/api/gestor/agenda?' + filtrosDaTela());
   const corpo = document.getElementById('listaAgenda');
 
@@ -1411,15 +1529,19 @@ async function carregarAgenda() {
     <div><span class="rot">Tempo</span><span class="val">${horas(r.resumo.minutos)}</span></div>
     <div><span class="rot">Previsto</span><span class="val">${moeda(r.resumo.receitaCentavos)}</span></div>`;
 
+  // Ordem pensada para o balcao: hora, quem, o que e quanto vem primeiro.
+  // Duracao, origem e barbeiro seguem visiveis, mas em segundo plano.
   corpo.innerHTML = r.itens.map(a => `
     <tr style="${a.status === 'Cancelado' ? 'opacity:.45' : ''}">
-      <td><strong>${dataLegivel(a.inicio)}</strong></td>
-      <td>${a.cliente ? esc(a.cliente) : '-'}<br><span class="preco">${esc(a.telefone)}</span></td>
-      <td>${esc(a.servico)}<br><span class="preco">${moeda(a.precoCentavos)}</span></td>
-      <td>${a.duracao} min</td>
+      <td class="quando"><strong style="font-size:15.5px">${soHora(a.inicio)}</strong>
+          <br><span class="preco">${soDia(a.inicio)}</span></td>
+      <td><strong>${a.cliente ? esc(a.cliente) : 'sem nome'}</strong>
+          <br><span class="preco">${esc(a.telefone)}</span></td>
+      <td>${esc(a.servico)}<br><span class="preco">${a.duracao} min</span></td>
+      <td class="num"><strong>${moeda(a.precoCentavos)}</strong></td>
       <td>${esc(a.barbeiro)}</td>
-      <td><span class="tag">${esc(a.origem)}</span></td>
-      <td><span class="tag ${a.status === 'Cancelado' ? 'erro' : 'ok'}">${esc(a.status)}</span></td>
+      <td><span class="tag ${a.status === 'Cancelado' ? 'erro' : 'ok'}">${esc(a.status)}</span>
+          <br><span class="preco">${esc(a.origem)}</span></td>
       <td>${a.status === 'Cancelado' ? '' : `
         <button class="btn pequeno neutro" data-mover="${esc(a.id)}"
           data-info="${esc((a.cliente || a.telefone) + ' — ' + a.servico)}">Reagendar</button>
@@ -1848,8 +1970,6 @@ async function salvarUsuario() {
   } catch (e) { aviso(msg, e.message); }
 }
 
-if (Auth.exigirLogin()) iniciar();
-
 async function carregarPermissoes() {
   const d = await api('/api/admin/permissoes');
 
@@ -2101,6 +2221,11 @@ async function carregarDashboard() {
         <td>${moeda(p.valorEstoqueCentavos)}</td></tr>`).join('')
     : '<tr><td colspan="4" class="vazio">Nenhum produto cadastrado.</td></tr>';
 }
+
+// Ultima linha do arquivo de proposito. Rodando no meio, iniciar() esbarrava em
+// const declarado mais abaixo (PERIODOS_D) e estourava ReferenceError por TDZ,
+// derrubando o resto da inicializacao do admin.
+if (Auth.exigirLogin()) iniciar();
 </script>
 </body>
 </html>
