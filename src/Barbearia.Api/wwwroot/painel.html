@@ -7,7 +7,7 @@
 <title>Painel</title>
 <script>document.documentElement.dataset.tema =
   localStorage.getItem('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro');</script>
-<link rel="stylesheet" href="app.css?v=202608161600">
+<link rel="stylesheet" href="app.css?v=202608161800">
 </head>
 <body>
 <header class="topo" id="topo"></header>
@@ -255,16 +255,20 @@
       </div>
 
       <details class="filtros" id="filtros">
+        <!-- O flex fica no <span> de dentro, nunca no proprio <summary>: trocar
+             o display de um summary faz o Safari parar de abrir e fechar. -->
         <summary>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 5h18l-7 8v6l-4 2v-8z"/>
-          </svg>
-          <span>Filtros</span>
-          <span class="tag" id="filtrosResumo">periodo de hoje</span>
-          <span class="seta">
+          <span class="summary-linha">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M6 9l6 6 6-6"/>
+              <path d="M3 5h18l-7 8v6l-4 2v-8z"/>
             </svg>
+            <span>Filtros</span>
+            <span class="tag" id="filtrosResumo">periodo de hoje</span>
+            <span class="seta">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 9l6 6 6-6"/>
+              </svg>
+            </span>
           </span>
         </summary>
 
@@ -839,7 +843,7 @@
 </main>
 </div>
 
-<script src="app.js?v=202608161600"></script>
+<script src="app.js?v=202608161800"></script>
 <script>
 const msg = document.getElementById('msg');
 let barbeiros = [];
