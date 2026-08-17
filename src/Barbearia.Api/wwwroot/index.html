@@ -5,9 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" id="metaTema" content="#f6f6f8">
 <title>Entrar</title>
+<link rel="icon" href="favicon.svg?v=202608171445" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png?v=202608171445" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=202608171445">
 <script>document.documentElement.dataset.tema =
   localStorage.getItem('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro');</script>
-<link rel="stylesheet" href="app.css?v=202608161800">
+<link rel="stylesheet" href="app.css?v=202608172210">
 <style>
   body {
     /* 100vh e a reserva para navegador antigo; 100dvh acompanha a barra de
@@ -276,7 +279,7 @@
   </div>
 </main>
 
-<script src="app.js?v=202608161800"></script>
+<script src="app.js?v=202608172210"></script>
 <script>
 if (Auth.token) location.replace('painel.html');
 

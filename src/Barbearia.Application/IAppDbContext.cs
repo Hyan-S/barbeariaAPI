@@ -17,6 +17,8 @@ public interface IAppDbContext
     DbSet<Domain.Entities.Configuracao> Configuracoes { get; }
     DbSet<Produto> Produtos { get; }
     DbSet<BarbeiroServico> BarbeiroServicos { get; }
+    DbSet<Avaliacao> Avaliacoes { get; }
+    DbSet<PedidoProduto> PedidosProduto { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

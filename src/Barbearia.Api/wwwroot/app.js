@@ -113,6 +113,16 @@ const ROTULOS = [
   ['PUT',    /^\/api\/produtos\/[^/]+$/,                        'Salvando o produto',         'Produto salvo'],
   ['DELETE', /^\/api\/produtos\/[^/]+$/,                        'Removendo o produto',        'Produto removido'],
 
+  ['GET',    /^\/api\/vitrine\/produtos$/,                      'Carregando produtos',        'Produtos carregados'],
+  ['POST',   /^\/api\/vitrine\/produtos\/[^/]+\/avaliacoes$/,   'Enviando a avaliacao',       'Avaliacao enviada'],
+  ['GET',    /^\/api\/vitrine\/produtos\/[^/]+$/,               'Abrindo o produto',          'Produto aberto'],
+  ['POST',   /^\/api\/vitrine\/pedidos$/,                       'Marcando o produto',         'Produto marcado'],
+  ['DELETE', /^\/api\/vitrine\/pedidos$/,                       'Desmarcando o produto',      'Produto desmarcado'],
+
+  ['GET',    /^\/api\/gestor\/avaliacoes$/,                     'Carregando avaliacoes',      'Avaliacoes carregadas'],
+  ['PUT',    /^\/api\/gestor\/avaliacoes\/[^/]+$/,              'Mudando a situacao',         'Situacao alterada'],
+  ['DELETE', /^\/api\/gestor\/avaliacoes\/[^/]+$/,              'Apagando a avaliacao',       'Avaliacao apagada'],
+
   ['GET',    /^\/api\/clientes$/,                               'Carregando clientes',        'Clientes carregados'],
   ['GET',    /^\/api\/clientes\/[^/]+$/,                        'Abrindo o cliente',          'Cliente aberto'],
   ['PUT',    /^\/api\/clientes\/[^/]+$/,                        'Salvando o cliente',         'Cliente salvo'],
@@ -289,6 +299,32 @@ function soDia(iso) {
 
 const DIAS = ['Domingo', 'Segunda', 'Terca', 'Quarta', 'Quinta', 'Sexta', 'Sabado'];
 
+const ESTRELA_SVG = 'M12 2.5l2.95 5.98 6.6.96-4.77 4.65 1.12 6.57L12 17.55l-5.9 3.11 1.13-6.57L2.46 9.44l6.6-.96z';
+
+// Estrelas de leitura. Sem meia estrela de proposito: a nota vem arredondada e,
+// em 14px, meia estrela nao se distingue de uma cheia — daria a impressao de
+// numero exato onde nao ha. O texto ao lado mostra a nota real.
+function estrelas(nota, total, classe = '') {
+  const cheias = Math.round(nota || 0);
+
+  const desenho = Array.from({ length: 5 }, (_, i) =>
+    `<svg viewBox="0 0 24 24" class="${i < cheias ? 'cheia' : ''}" aria-hidden="true">
+       <path d="${ESTRELA_SVG}"/></svg>`).join('');
+
+  const semNota = !total;
+  const conta = total === undefined ? ''
+    : semNota ? '<span class="conta">sem avaliacoes</span>'
+    : `<span class="conta">${String(nota.toFixed(1)).replace('.', ',')} (${total})</span>`;
+
+  // Sem o total (uma avaliacao sozinha na lista) o rotulo descreve as estrelas
+  // desenhadas; com total, descreve a media do produto.
+  const rotulo = total === undefined ? `Nota ${cheias} de 5`
+    : semNota ? 'Sem avaliacoes'
+    : `Nota ${nota.toFixed(1)} de 5, ${total} avaliacoes`;
+
+  return `<span class="estrelas ${classe}" role="img" aria-label="${rotulo}">${desenho}${conta}</span>`;
+}
+
 const MARCA_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
   <circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/>
   <path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12"/></svg>`;
@@ -322,7 +358,8 @@ const ICONES = {
   config: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-2.9 1.2V21a2 2 0 11-4 0v-.1A1.7 1.7 0 007 19.4a1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00-1.2-2.9H1a2 2 0 110-4h.1A1.7 1.7 0 004.6 7a1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3H9a1.7 1.7 0 001-1.5V1a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9V9a1.7 1.7 0 001.5 1H23a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/>',
   sistema: '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
   dashboard: '<path d="M3 3v18h18"/><path d="M7 16v-5M12 16V7M17 16v-8"/>',
-  permissoes: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/>'
+  permissoes: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/>',
+  avaliacoes: '<path d="M12 2.5l2.95 5.98 6.6.96-4.77 4.65 1.12 6.57L12 17.55l-5.9 3.11 1.13-6.57L2.46 9.44l6.6-.96z"/>'
 };
 
 function icone(nome) {

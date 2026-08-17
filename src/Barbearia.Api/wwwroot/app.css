@@ -751,3 +751,166 @@ td.quando { white-space: nowrap; }
 
 .grafico-titulo { font-size: 13px; font-weight: 620; margin: 0 0 12px; }
 .duas { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+
+/* ================= Vitrine de produtos ================= */
+
+.estrelas { display: inline-flex; align-items: center; gap: 1px; vertical-align: middle; }
+.estrelas svg { width: 14px; height: 14px; fill: var(--linha-forte); flex: none; }
+.estrelas svg.cheia { fill: var(--latao-claro); }
+.estrelas .conta { margin-left: 6px; font-size: 12px; color: var(--texto-suave); }
+.estrelas.grande svg { width: 19px; height: 19px; }
+.estrelas.grande .conta { font-size: 13.5px; }
+
+/* O carrossel e a caixa que posiciona as setas por cima dele. */
+.vitrine-caixa { position: relative; }
+
+.vitrine {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  padding: 2px 2px 10px;
+}
+
+.vitrine .item {
+  flex: none;
+  width: 196px;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid var(--linha);
+  border-radius: var(--raio);
+  background: var(--superficie);
+}
+
+/* Produto nao tem imagem no cadastro, entao a capa e a inicial do nome sobre um
+   degrade em latao. Sem isso o carrossel viraria uma fileira de blocos de texto
+   iguais, e o objetivo do pedido era justamente dar destaque ao produto. */
+.vitrine .capa {
+  height: 72px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--linha);
+  border-radius: var(--raio-p);
+  background: linear-gradient(160deg, var(--latao-fraco), var(--fundo-alt));
+  color: var(--latao);
+  font-size: 27px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: border-color .15s;
+}
+
+.vitrine .item:hover .capa { border-color: var(--latao); }
+
+.vitrine .nome {
+  font-size: 14px;
+  font-weight: 620;
+  line-height: 1.3;
+  color: var(--texto);
+  text-decoration: none;
+}
+
+.vitrine .nome:hover { color: var(--latao); text-decoration: underline; }
+
+.vitrine .desc {
+  font-size: 12.5px;
+  color: var(--texto-suave);
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* margin-top:auto empurra o preco e os botoes para o rodape do cartao, entao a
+   fileira fica com os botoes alinhados mesmo com descricoes de tamanhos
+   diferentes. O estado do estoque fica ao lado do preco, nao junto do botao:
+   disputando a mesma linha, "Usar no corte" quebrava em tres linhas no celular. */
+.vitrine .rodape-item { display: flex; align-items: baseline; gap: 8px; margin-top: auto; }
+.vitrine .valor { font-size: 15.5px; font-weight: 650; }
+.vitrine .rodape-item .tag { margin-left: auto; }
+.vitrine .acoes { display: flex; gap: 6px; }
+
+.vitrine .acoes button.btn {
+  flex: 1;
+  padding: 7px 6px;
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+/* Setas: aparecem so quando ha o que rolar (o JS marca a classe) e nunca no
+   celular, onde arrastar com o dedo e mais natural.
+   Ficam na altura da capa, nao no meio do cartao: centralizadas na vertical elas
+   caiam justo sobre a descricao e o preco, tapando texto. */
+.seta-vitrine {
+  position: absolute;
+  top: 50px;
+  transform: translateY(-50%);
+  z-index: 2;
+  width: 32px; height: 32px;
+  display: none;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--linha-forte);
+  border-radius: 50%;
+  background: var(--superficie);
+  color: var(--texto);
+  cursor: pointer;
+  box-shadow: var(--sombra);
+}
+
+.vitrine-caixa.rolavel .seta-vitrine { display: grid; }
+.seta-vitrine:hover { border-color: var(--latao); color: var(--latao); }
+.seta-vitrine[disabled] { opacity: .35; cursor: default; }
+.seta-vitrine svg { width: 17px; height: 17px; }
+.seta-vitrine.esq { left: -10px; }
+.seta-vitrine.dir { right: -10px; }
+
+@media (max-width: 620px) {
+  .vitrine-caixa.rolavel .seta-vitrine { display: none; }
+  .vitrine .item { width: 168px; }
+}
+
+/* ---------- Avaliacoes ---------- */
+
+/* overflow-wrap protege de nome ou comentario com uma palavra unica enorme —
+   texto vindo de formulario publico, sem espaco para o navegador quebrar. */
+.aval { padding: 14px 0; border-bottom: 1px solid var(--linha); overflow-wrap: anywhere; }
+.aval:last-child { border-bottom: none; }
+.aval .topo-aval { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.aval .quem { font-weight: 620; font-size: 14px; }
+.aval .quando { font-size: 12px; color: var(--texto-fraco); margin-left: auto; }
+.aval p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--texto-suave); }
+
+/* Estrelas clicaveis do formulario. Sao radios de verdade por baixo: funciona
+   com teclado e leitor de tela, e o navegador cuida de deixar uma so marcada. */
+.nota-escolha { display: flex; gap: 3px; margin-bottom: 4px; }
+.nota-escolha input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+
+.nota-escolha label {
+  cursor: pointer;
+  margin: 0;
+  padding: 3px;
+  line-height: 0;
+  border-radius: 6px;
+}
+
+.nota-escolha svg { width: 26px; height: 26px; fill: var(--linha-forte); transition: fill .12s; }
+.nota-escolha label:hover svg { fill: var(--latao-claro); }
+.nota-escolha label.marcada svg { fill: var(--latao-claro); }
+.nota-escolha input:focus-visible + label { outline: 2px solid var(--latao); outline-offset: 1px; }
+
+/* Barras da distribuicao de notas. */
+.dist { display: grid; gap: 5px; }
+.dist .linha-nota { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--texto-suave); }
+.dist .barra { flex: 1; height: 7px; border-radius: 4px; background: var(--fundo-alt); overflow: hidden; }
+.dist .barra i { display: block; height: 100%; background: var(--latao-claro); }
+.dist .qtd { width: 22px; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Produto pedido, mostrado na linha da agenda do painel. */
+.tag.usar { background: var(--info-fundo); color: var(--info); }
+.tag.comprar { background: var(--ok-fundo); color: var(--ok); }

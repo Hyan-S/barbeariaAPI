@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" id="metaTema" content="#f6f6f8">
+<title>Produto</title>
+<link rel="icon" href="favicon.svg?v=202608171445" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png?v=202608171445" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=202608171445">
+<script>document.documentElement.dataset.tema =
+  localStorage.getItem('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro');</script>
+<link rel="stylesheet" href="app.css?v=202608172210">
+<style>
+  main { max-width: 620px; }
+
+  .ficha { display: flex; gap: 16px; align-items: flex-start; }
+
+  /* Mesma capa do carrossel, em tamanho de vitrine. */
+  .ficha .capa {
+    flex: none;
+    width: 96px; height: 96px;
+    display: grid; place-items: center;
+    border: 1px solid var(--linha);
+    border-radius: var(--raio);
+    background: linear-gradient(160deg, var(--latao-fraco), var(--fundo-alt));
+    color: var(--latao);
+    font-size: 40px;
+    font-weight: 700;
+  }
+
+  .ficha h2 { margin: 0 0 8px; }
+  .ficha .valor { font-size: 22px; font-weight: 680; margin: 10px 0 0; }
+
+  /* O comentario pode ter linha em branco; pre-line preserva sem deixar o texto
+     escapar da caixa como o pre faria. */
+  .aval p { white-space: pre-line; }
+
+  @media (max-width: 480px) {
+    .ficha { gap: 13px; }
+    .ficha .capa { width: 72px; height: 72px; font-size: 30px; }
+    .ficha h2 { font-size: 19px; }
+  }
+</style>
+</head>
+<body>
+<header class="topo" id="topo"></header>
+
+<main>
+  <div id="msg" class="oculto"></div>
+
+  <div class="card" id="cartao">
+    <div class="ficha">
+      <span class="capa" id="capa"></span>
+      <div style="min-width:0">
+        <h2 id="nome">...</h2>
+        <div id="nota"></div>
+        <p class="valor" id="valor"></p>
+        <p id="estoque" style="margin:8px 0 0"></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card oculto" id="conteudo">
+    <div class="abas" id="abas" role="tablist">
+      <button type="button" class="ativa" data-aba="detalhes" role="tab"
+              aria-selected="true" aria-controls="abaDetalhes">Detalhes</button>
+      <button type="button" data-aba="avaliacoes" role="tab"
+              aria-selected="false" aria-controls="abaAvaliacoes" id="botaoAvaliacoes">Avaliacoes</button>
+    </div>
+
+    <div id="abaDetalhes" role="tabpanel">
+      <p id="descricao" style="font-size:14.5px;line-height:1.6;margin:0 0 20px"></p>
+      <div class="dist" id="distribuicao"></div>
+    </div>
+
+    <div id="abaAvaliacoes" class="oculto" role="tabpanel">
+      <div id="listaAvaliacoes"></div>
+      <div id="semAvaliacoes" class="vazio oculto">
+        Ninguem avaliou ainda. Seja o primeiro.
+      </div>
+
+      <div id="formulario" style="border-top:1px solid var(--linha);margin-top:18px;padding-top:20px">
+        <h3 style="font-size:15px;margin:0 0 4px">Deixe a sua avaliacao</h3>
+        <p class="ajuda" style="margin-bottom:16px">
+          Qualquer pessoa pode avaliar, e o seu comentario aparece na hora.
+        </p>
+
+        <div class="campo">
+          <label id="rotuloNota">Sua nota</label>
+          <div class="nota-escolha" id="notaEscolha" role="radiogroup" aria-labelledby="rotuloNota"></div>
+        </div>
+
+        <div class="linha">
+          <div class="campo">
+            <label for="aNome">Nome</label>
+            <input id="aNome" placeholder="Como quer aparecer" maxlength="120">
+          </div>
+          <div class="campo">
+            <label for="aTelefone">WhatsApp com DDD</label>
+            <input id="aTelefone" inputmode="numeric" placeholder="11987654321">
+          </div>
+        </div>
+
+        <p class="ajuda" style="margin:-8px 0 16px">
+          O telefone nao aparece na pagina. Serve para garantir uma avaliacao por pessoa.
+        </p>
+
+        <div class="campo">
+          <label for="aComentario">Comentario (opcional)</label>
+          <textarea id="aComentario" rows="3" maxlength="600"
+                    placeholder="O que voce achou do produto"></textarea>
+        </div>
+
+        <button class="btn" id="enviar">Enviar avaliacao</button>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn neutro" style="width:100%;margin-top:4px" id="voltar">Voltar</button>
+</main>
+
+<script src="app.js?v=202608172210"></script>
+<script>
+const msg = document.getElementById('msg');
+const produtoId = new URLSearchParams(location.search).get('id');
+
+let notaEscolhida = 0;
+
+iniciar();
+
+function montarCabecalho() {
+  document.getElementById('topo').innerHTML =
+    `<div class="marca-topo"><span class="marca-mark">${MARCA_SVG}</span>
+       <h1 id="titulo">Produto</h1></div>
+     <span class="espaco"></span>${botaoTema()}`;
+}
+
+async function iniciar() {
+  montarCabecalho();
+
+  document.getElementById('voltar').onclick = () =>
+    history.length > 1 ? history.back() : location.assign('agendar.html');
+
+  api('/api/config').then(c => {
+    if (c.nome) document.getElementById('titulo').textContent = c.nome;
+  }).catch(() => {});
+
+  document.querySelectorAll('#abas button').forEach(b =>
+    b.onclick = () => trocarAba(b.dataset.aba));
+
+  montarEscolhaDeNota();
+  document.getElementById('enviar').onclick = enviarAvaliacao;
+
+  if (!produtoId) {
+    aviso(msg, 'Endereco sem produto. Volte e escolha um produto na lista.');
+    document.getElementById('cartao').classList.add('oculto');
+    return;
+  }
+
+  await carregar();
+}
+
+async function carregar() {
+  let p;
+  try {
+    p = await api('/api/vitrine/produtos/' + encodeURIComponent(produtoId));
+  } catch (e) {
+    aviso(msg, e.message);
+    document.getElementById('cartao').classList.add('oculto');
+    return;
+  }
+
+  document.title = p.nome;
+  document.getElementById('capa').textContent = (p.nome || '?').trim()[0].toUpperCase();
+  document.getElementById('nome').textContent = p.nome;
+  document.getElementById('valor').textContent = moeda(p.precoCentavos);
+  document.getElementById('nota').innerHTML = estrelas(p.nota, p.totalAvaliacoes, 'grande');
+
+  document.getElementById('estoque').innerHTML = p.temEstoque
+    ? '<span class="tag ok">disponivel na loja</span>'
+    : '<span class="tag">sem estoque agora</span>';
+
+  document.getElementById('descricao').textContent =
+    p.descricao || 'Este produto ainda nao tem descricao.';
+
+  document.getElementById('botaoAvaliacoes').textContent =
+    p.totalAvaliacoes ? `Avaliacoes (${p.totalAvaliacoes})` : 'Avaliacoes';
+
+  desenharDistribuicao(p.distribuicao, p.totalAvaliacoes);
+  desenharAvaliacoes(p.avaliacoes);
+
+  document.getElementById('conteudo').classList.remove('oculto');
+}
+
+function trocarAba(qual) {
+  document.querySelectorAll('#abas button').forEach(b => {
+    const ativa = b.dataset.aba === qual;
+    b.classList.toggle('ativa', ativa);
+    b.setAttribute('aria-selected', ativa);
+  });
+
+  document.getElementById('abaDetalhes').classList.toggle('oculto', qual !== 'detalhes');
+  document.getElementById('abaAvaliacoes').classList.toggle('oculto', qual !== 'avaliacoes');
+}
+
+function desenharDistribuicao(distribuicao, total) {
+  const caixa = document.getElementById('distribuicao');
+
+  if (!total) { caixa.innerHTML = ''; return; }
+
+  caixa.innerHTML = distribuicao.map(d => `
+    <div class="linha-nota">
+      <span>${d.nota}&#9733;</span>
+      <span class="barra"><i style="width:${Math.round(d.quantas / total * 100)}%"></i></span>
+      <span class="qtd">${d.quantas}</span>
+    </div>`).join('');
+}
+
+function desenharAvaliacoes(lista) {
+  const caixa = document.getElementById('listaAvaliacoes');
+
+  document.getElementById('semAvaliacoes').classList.toggle('oculto', lista.length > 0);
+
+  caixa.innerHTML = lista.map(a => `
+    <div class="aval">
+      <div class="topo-aval">
+        <span class="quem">${esc(a.nome)}</span>
+        ${estrelas(a.nota)}
+        <span class="quando">${new Date(a.quando).toLocaleDateString('pt-BR')}</span>
+      </div>
+      ${a.comentario ? `<p>${esc(a.comentario)}</p>` : ''}
+    </div>`).join('');
+}
+
+function montarEscolhaDeNota() {
+  const caixa = document.getElementById('notaEscolha');
+
+  caixa.innerHTML = [1, 2, 3, 4, 5].map(n => `
+    <input type="radio" name="nota" id="nota${n}" value="${n}">
+    <label for="nota${n}" title="${n} de 5" aria-label="${n} de 5">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="${ESTRELA_SVG}"/></svg>
+    </label>`).join('');
+
+  caixa.querySelectorAll('input').forEach(radio => {
+    radio.onchange = () => {
+      notaEscolhida = Number(radio.value);
+
+      // Pinta todas as estrelas ate a escolhida, nao so a clicada.
+      caixa.querySelectorAll('label').forEach((rotulo, i) =>
+        rotulo.classList.toggle('marcada', i < notaEscolhida));
+    };
+  });
+}
+
+async function enviarAvaliacao() {
+  aviso(msg, '');
+
+  if (!notaEscolhida) {
+    aviso(msg, 'Escolha de 1 a 5 estrelas.');
+    return;
+  }
+
+  const botao = document.getElementById('enviar');
+  botao.disabled = true;
+
+  try {
+    const r = await api(`/api/vitrine/produtos/${encodeURIComponent(produtoId)}/avaliacoes`, {
+      method: 'POST',
+      body: JSON.stringify({
+        nome: document.getElementById('aNome').value,
+        telefone: document.getElementById('aTelefone').value,
+        nota: notaEscolhida,
+        comentario: document.getElementById('aComentario').value
+      })
+    });
+
+    // Recarrega antes de trocar o formulario pelo aviso: o comentario ja esta no
+    // ar, entao a pessoa tem que ver o proprio texto na lista e a media mudar.
+    await carregar();
+    trocarAba('avaliacoes');
+
+    // O formulario sai de cena porque o indice unico nao deixaria a mesma pessoa
+    // mandar outra avaliacao para este produto.
+    document.getElementById('formulario').innerHTML =
+      `<p class="aviso ok" style="margin:0">${esc(r.aviso)}</p>`;
+  } catch (e) {
+    botao.disabled = false;
+    aviso(msg, e.message);
+  }
+}
+</script>
+</body>
+</html>

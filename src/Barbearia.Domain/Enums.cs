@@ -21,3 +21,9 @@ public enum Perfil
     Gestor = 1,
     Barbeiro = 2
 }
+
+public enum TipoPedido
+{
+    Usar = 0,
+    Comprar = 1
+}

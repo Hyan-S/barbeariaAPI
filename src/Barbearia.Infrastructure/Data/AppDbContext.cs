@@ -18,6 +18,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Configuracao> Configuracoes => Set<Configuracao>();
     public DbSet<Produto> Produtos => Set<Produto>();
     public DbSet<BarbeiroServico> BarbeiroServicos => Set<BarbeiroServico>();
+    public DbSet<Avaliacao> Avaliacoes => Set<Avaliacao>();
+    public DbSet<PedidoProduto> PedidosProduto => Set<PedidoProduto>();
 
     public const string ConstraintSemSobreposicao = "ck_agendamentos_sem_sobreposicao";
 
@@ -73,6 +75,49 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasKey(x => x.Id);
             e.Property(x => x.Nome).HasMaxLength(120).IsRequired();
             e.Property(x => x.Descricao).HasMaxLength(400);
+        });
+
+        b.Entity<Avaliacao>(e =>
+        {
+            e.ToTable("avaliacoes");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Nome).HasMaxLength(120).IsRequired();
+            e.Property(x => x.Telefone).HasMaxLength(20).IsRequired();
+            e.Property(x => x.Comentario).HasMaxLength(600);
+
+            e.HasOne(x => x.Produto)
+                .WithMany()
+                .HasForeignKey(x => x.ProdutoId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Uma avaliacao por telefone por produto. E o freio de spam que
+            // sobra quando qualquer visitante pode avaliar: sem ele, a mesma
+            // pessoa (ou um script) empilha notas no mesmo produto a vontade.
+            e.HasIndex(x => new { x.ProdutoId, x.Telefone }).IsUnique();
+
+            // A vitrine le sempre "visiveis deste produto".
+            e.HasIndex(x => new { x.ProdutoId, x.Visivel });
+        });
+
+        b.Entity<PedidoProduto>(e =>
+        {
+            e.ToTable("pedidos_produto");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Tipo).HasConversion<int>();
+
+            e.HasOne(x => x.Agendamento)
+                .WithMany()
+                .HasForeignKey(x => x.AgendamentoId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(x => x.Produto)
+                .WithMany()
+                .HasForeignKey(x => x.ProdutoId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Um pedido por produto em cada agendamento: clicar de novo troca
+            // entre "usar" e "levar" em vez de criar linha repetida.
+            e.HasIndex(x => new { x.AgendamentoId, x.ProdutoId }).IsUnique();
         });
 
         b.Entity<Cliente>(e =>

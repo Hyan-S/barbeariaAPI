@@ -5,9 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" id="metaTema" content="#f6f6f8">
 <title>Agendar horario</title>
+<link rel="icon" href="favicon.svg?v=202608171445" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png?v=202608171445" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=202608171445">
 <script>document.documentElement.dataset.tema =
   localStorage.getItem('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro');</script>
-<link rel="stylesheet" href="app.css?v=202608161800">
+<link rel="stylesheet" href="app.css?v=202608172210">
 <style>
   /* Cada etapa mostra um card baixo, entao sobrava uma faixa vazia enorme no
      fim da tela. Em coluna flex, margin-block:auto centraliza o card na sobra
@@ -120,18 +123,42 @@
 <main>
   <div id="msg" class="oculto"></div>
 
-  <div id="pronto" class="card oculto">
-    <div class="sucesso">
-      <div class="selo">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M20 6L9 17l-5-5"/>
-        </svg>
+  <div id="depois" class="oculto">
+    <div class="card">
+      <div class="sucesso">
+        <div class="selo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 6L9 17l-5-5"/>
+          </svg>
+        </div>
+        <h2 style="font-size:21px;margin:0 0 6px">Horario confirmado</h2>
+        <p class="ajuda" style="margin-bottom:20px">Te esperamos!</p>
       </div>
-      <h2 style="font-size:21px;margin:0 0 6px">Horario confirmado</h2>
-      <p class="ajuda" style="margin-bottom:20px">Te esperamos!</p>
+
+      <div class="resumo" id="resumoFinal"></div>
     </div>
 
-    <div class="resumo" id="resumoFinal"></div>
+    <div class="card oculto" id="vitrine">
+      <h2>Leve pra casa</h2>
+      <p class="ajuda">Marque o que quiser e o barbeiro ja separa no seu horario.</p>
+
+      <div class="vitrine-caixa" id="caixaVitrine">
+        <button class="seta-vitrine esq" type="button" aria-label="Produtos anteriores">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15 18l-6-6 6-6"/>
+          </svg>
+        </button>
+
+        <div class="vitrine" id="listaVitrine"></div>
+
+        <button class="seta-vitrine dir" type="button" aria-label="Proximos produtos">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 6l6 6-6 6"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
     <button class="btn neutro" style="width:100%" onclick="location.reload()">Fazer outro agendamento</button>
   </div>
 
@@ -187,7 +214,7 @@
   </div>
 </main>
 
-<script src="app.js?v=202608161800"></script>
+<script src="app.js?v=202608172210"></script>
 <script>
 const msg = document.getElementById('msg');
 const token = new URLSearchParams(location.search).get('t');
@@ -434,6 +461,127 @@ function resumoHtml(inicioIso, barbeiroConfirmado) {
     <div><span class="rot">Valor</span><span class="val">${moeda(servicoEscolhido.precoCentavos)}</span></div>`;
 }
 
+// ---------- Vitrine de produtos (aparece depois de confirmar) ----------
+
+let agendamentoConfirmado = null;
+
+// produtoId -> 'Usar' | 'Comprar'. O servidor guarda um pedido por produto por
+// agendamento, entao aqui tambem so cabe um dos dois por cartao.
+const pedidosMarcados = new Map();
+
+async function montarVitrine(agendamentoId) {
+  agendamentoConfirmado = agendamentoId;
+
+  let produtos;
+  try {
+    produtos = await api('/api/vitrine/produtos');
+  } catch {
+    return; // vitrine indisponivel nao e problema do cliente: o horario esta feito
+  }
+
+  if (!produtos.length) return;
+
+  const trilho = document.getElementById('listaVitrine');
+
+  trilho.innerHTML = produtos.map(p => {
+    const link = `produto.html?id=${encodeURIComponent(p.id)}`;
+
+    return `
+      <div class="item" data-id="${esc(p.id)}">
+        <a class="capa" href="${link}" aria-label="Ver ${esc(p.nome)}">${esc(inicialDe(p.nome))}</a>
+        <a class="nome" href="${link}">${esc(p.nome)}</a>
+        ${estrelas(p.nota, p.totalAvaliacoes)}
+        ${p.descricao ? `<p class="desc">${esc(p.descricao)}</p>` : ''}
+        <div class="rodape-item">
+          <span class="valor">${moeda(p.precoCentavos)}</span>
+          ${p.temEstoque ? '' : '<span class="tag">sem estoque</span>'}
+        </div>
+        <div class="acoes">
+          <button class="btn neutro" type="button" data-tipo="Usar">Usar no corte</button>
+          ${p.temEstoque
+            ? '<button class="btn neutro" type="button" data-tipo="Comprar">Quero levar</button>'
+            : ''}
+        </div>
+      </div>`;
+  }).join('');
+
+  trilho.querySelectorAll('.item').forEach(item => {
+    item.querySelectorAll('.acoes button').forEach(botao => {
+      botao.onclick = () => alternarPedido(item, botao.dataset.tipo);
+    });
+  });
+
+  document.getElementById('vitrine').classList.remove('oculto');
+  ligarSetas(document.getElementById('caixaVitrine'));
+}
+
+function inicialDe(nome) {
+  const limpo = (nome || '').trim();
+  return limpo ? limpo[0].toUpperCase() : '?';
+}
+
+async function alternarPedido(item, tipo) {
+  const produtoId = item.dataset.id;
+  const jaMarcado = pedidosMarcados.get(produtoId);
+
+  const botoes = item.querySelectorAll('.acoes button');
+  botoes.forEach(b => b.disabled = true);
+
+  try {
+    if (jaMarcado === tipo) {
+      await api('/api/vitrine/pedidos'
+        + `?agendamentoId=${encodeURIComponent(agendamentoConfirmado)}`
+        + `&produtoId=${encodeURIComponent(produtoId)}`, { method: 'DELETE' });
+
+      pedidosMarcados.delete(produtoId);
+    } else {
+      await api('/api/vitrine/pedidos', {
+        method: 'POST',
+        body: JSON.stringify({ agendamentoId: agendamentoConfirmado, produtoId, tipo })
+      });
+
+      pedidosMarcados.set(produtoId, tipo);
+    }
+  } catch (e) {
+    aviso(msg, e.message);
+  } finally {
+    botoes.forEach(b => b.disabled = false);
+    pintarPedido(item);
+  }
+}
+
+// Botao marcado perde a classe "neutro" e fica em latao cheio.
+function pintarPedido(item) {
+  const marcado = pedidosMarcados.get(item.dataset.id);
+
+  item.querySelectorAll('.acoes button').forEach(b =>
+    b.classList.toggle('neutro', b.dataset.tipo !== marcado));
+}
+
+// Setas so no desktop e so quando ha o que rolar — no celular arrastar com o
+// dedo resolve, e a classe "rolavel" e o que libera as setas no CSS.
+function ligarSetas(caixa) {
+  const trilho = caixa.querySelector('.vitrine');
+  const esquerda = caixa.querySelector('.seta-vitrine.esq');
+  const direita = caixa.querySelector('.seta-vitrine.dir');
+
+  const atualizar = () => {
+    const sobra = trilho.scrollWidth - trilho.clientWidth;
+    caixa.classList.toggle('rolavel', sobra > 4);
+    esquerda.disabled = trilho.scrollLeft <= 4;
+    direita.disabled = trilho.scrollLeft >= sobra - 4;
+  };
+
+  const passo = () => Math.max(160, trilho.clientWidth * 0.8);
+
+  esquerda.onclick = () => trilho.scrollBy({ left: -passo() });
+  direita.onclick = () => trilho.scrollBy({ left: passo() });
+
+  trilho.addEventListener('scroll', atualizar, { passive: true });
+  addEventListener('resize', atualizar);
+  atualizar();
+}
+
 async function confirmar() {
   aviso(msg, '');
   const botao = document.getElementById('confirmar');
@@ -455,8 +603,12 @@ async function confirmar() {
     document.getElementById('resumoFinal').innerHTML =
       resumoHtml(resultado.inicio, resultado.barbeiro);
     document.getElementById('fluxo').classList.add('oculto');
-    document.getElementById('pronto').classList.remove('oculto');
+    document.getElementById('depois').classList.remove('oculto');
     window.scrollTo(0, 0);
+
+    // Sem await: a vitrine e um extra depois do horario ja garantido. Se a
+    // chamada demorar ou falhar, a tela de confirmacao nao pode ficar esperando.
+    montarVitrine(resultado.id);
   } catch (e) {
     botao.disabled = false;
     if (e.status === 409) {

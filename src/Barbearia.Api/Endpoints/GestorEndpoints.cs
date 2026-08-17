@@ -90,6 +90,29 @@ public static class GestorEndpoints
 
             var ativos = lista.Where(a => a.Status != StatusAgendamento.Cancelado).ToList();
 
+            var exibir = lista.Take(TetoExibicao).ToList();
+
+            // Produtos que o cliente marcou na vitrine, buscados de uma vez para
+            // a pagina inteira: dentro do Select seria uma consulta por linha.
+            var ids = exibir.Select(a => a.Id).ToList();
+
+            var pedidos = (await db.PedidosProduto.AsNoTracking()
+                    .Where(p => ids.Contains(p.AgendamentoId))
+                    .Select(p => new
+                    {
+                        p.AgendamentoId,
+                        produto = p.Produto!.Nome,
+                        precoCentavos = p.Produto.PrecoCentavos,
+                        tipo = p.Tipo
+                    })
+                    .ToListAsync())
+                .GroupBy(p => p.AgendamentoId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Select(p => new { p.produto, p.precoCentavos, tipo = p.tipo.ToString() })
+                          .OrderBy(p => p.produto)
+                          .ToList());
+
             return Results.Ok(new
             {
                 total = lista.Count,
@@ -102,7 +125,7 @@ public static class GestorEndpoints
                     minutos = ativos.Sum(a => (int)(a.FimUtc - a.InicioUtc).TotalMinutes),
                     receitaCentavos = ativos.Sum(a => a.Servico!.PrecoCentavos)
                 },
-                itens = lista.Take(TetoExibicao).Select(a => new
+                itens = exibir.Select(a => new
                 {
                     a.Id,
                     inicio = Fuso.ParaLocal(a.InicioUtc),
@@ -117,7 +140,8 @@ public static class GestorEndpoints
                     a.BarbeiroId,
                     status = a.Status.ToString(),
                     origem = a.Origem.ToString(),
-                    a.Observacao
+                    a.Observacao,
+                    produtos = pedidos.GetValueOrDefault(a.Id)
                 })
             });
         });

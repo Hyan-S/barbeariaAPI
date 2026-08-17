@@ -5,9 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" id="metaTema" content="#f6f6f8">
 <title>Painel</title>
+<link rel="icon" href="favicon.svg?v=202608171445" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png?v=202608171445" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=202608171445">
 <script>document.documentElement.dataset.tema =
   localStorage.getItem('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro');</script>
-<link rel="stylesheet" href="app.css?v=202608161800">
+<link rel="stylesheet" href="app.css?v=202608172210">
 </head>
 <body>
 <header class="topo" id="topo"></header>
@@ -521,6 +524,67 @@
     </div>
   </section>
 
+  <section id="secao-avaliacoes" class="oculto">
+    <div class="card">
+      <h2>Avaliacoes de produtos</h2>
+      <p class="ajuda">
+        O que o cliente escreve na pagina do produto entra no ar na hora.
+        Aqui voce acompanha, tira do ar ou apaga de vez.
+      </p>
+
+      <details class="filtros" id="filtrosAval">
+        <summary>
+          <span class="summary-linha">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 5h18l-7 8v6l-4 2v-8z"/>
+            </svg>
+            <span>Filtros</span>
+            <span class="tag" id="avalResumo">todos os produtos</span>
+            <span class="seta">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 9l6 6 6-6"/>
+              </svg>
+            </span>
+          </span>
+        </summary>
+
+        <div class="filtros-corpo">
+          <div class="linha">
+            <div class="campo">
+              <label for="fAvalProduto">Produto</label>
+              <select id="fAvalProduto"><option value="">Todos os produtos</option></select>
+            </div>
+            <div class="campo">
+              <label for="fAvalSituacao">Situacao</label>
+              <select id="fAvalSituacao">
+                <option value="">Todas</option>
+                <option value="true">No ar</option>
+                <option value="false">Fora do ar</option>
+              </select>
+            </div>
+            <div class="campo">
+              <label for="fAvalNota">Nota</label>
+              <select id="fAvalNota">
+                <option value="">Todas</option>
+                <option value="5">5 estrelas</option>
+                <option value="4">4 estrelas</option>
+                <option value="3">3 estrelas</option>
+                <option value="2">2 estrelas</option>
+                <option value="1">1 estrela</option>
+              </select>
+            </div>
+          </div>
+
+          <button class="btn neutro pequeno" id="limparFiltroAval" style="margin-bottom:12px">Limpar filtros</button>
+        </div>
+      </details>
+
+      <div id="resumoAval" class="resumo-agenda oculto"></div>
+      <div id="listaAval"></div>
+      <div id="avalVazio" class="vazio oculto">Nenhuma avaliacao com esse filtro.</div>
+    </div>
+  </section>
+
   <section id="secao-clientes" class="oculto">
     <div class="card">
       <h2>Clientes</h2>
@@ -843,7 +907,7 @@
 </main>
 </div>
 
-<script src="app.js?v=202608161800"></script>
+<script src="app.js?v=202608172210"></script>
 <script>
 const msg = document.getElementById('msg');
 let barbeiros = [];
@@ -871,10 +935,11 @@ function iniciar() {
     {
       titulo: 'Cadastros',
       itens: [
-        { chave: 'servicos',  nome: 'Servicos',  permissao: 'servicos' },
-        { chave: 'produtos',  nome: 'Produtos',  permissao: 'produtos' },
-        { chave: 'horarios',  nome: 'Horarios',  perfis: GESTAO },
-        { chave: 'bloqueios', nome: 'Bloqueios', perfis: GESTAO }
+        { chave: 'servicos',   nome: 'Servicos',   permissao: 'servicos' },
+        { chave: 'produtos',   nome: 'Produtos',   permissao: 'produtos' },
+        { chave: 'avaliacoes', nome: 'Avaliacoes', permissao: 'produtos' },
+        { chave: 'horarios',   nome: 'Horarios',   perfis: GESTAO },
+        { chave: 'bloqueios',  nome: 'Bloqueios',  perfis: GESTAO }
       ]
     },
     {
@@ -898,6 +963,7 @@ function iniciar() {
     if (chave === 'pessoas') carregarPessoas();
     if (chave === 'permissoes') carregarPermissoes();
     if (chave === 'dashboard') carregarDashboard();
+    if (chave === 'avaliacoes') carregarAvaliacoes();
   });
 
   document.getElementById('eDia').innerHTML = DIAS.map((d, i) => `<option value="${i}">${d}</option>`).join('');
@@ -924,6 +990,11 @@ function iniciar() {
     document.getElementById('salvarProduto').onclick = salvarProduto;
     document.getElementById('cancelarProduto').onclick = limparProduto;
     carregarProdutos();
+
+    ['fAvalProduto', 'fAvalSituacao', 'fAvalNota'].forEach(id =>
+      document.getElementById(id).onchange = carregarAvaliacoes);
+
+    document.getElementById('limparFiltroAval').onclick = limparFiltrosAval;
   }
 
   if (Auth.permite('clientes')) {
@@ -1224,6 +1295,158 @@ async function carregarProdutos() {
       carregarProdutos();
     };
   });
+}
+
+// O que o cliente marcou na vitrine depois de agendar. Fica na coluna do servico
+// porque e o que vai acontecer na cadeira — o barbeiro ve antes de chamar.
+function tagsDeProduto(produtos) {
+  if (!produtos || produtos.length === 0) return '';
+
+  return '<br>' + produtos.map(p => {
+    const levar = p.tipo === 'Comprar';
+    const dica = (levar ? 'Quer levar' : 'Quer usar no corte') + ' — ' + moeda(p.precoCentavos);
+
+    return `<span class="tag ${levar ? 'comprar' : 'usar'}" title="${esc(dica)}"
+      style="margin-top:4px">${levar ? 'levar' : 'usar'}: ${esc(p.produto)}</span>`;
+  }).join(' ');
+}
+
+// ---------- Avaliacoes de produtos ----------
+// Nao ha aprovacao: o comentario ja esta no site quando chega aqui. Esta tela e
+// curadoria — achar pelo produto, tirar do ar (o texto fica guardado) ou apagar.
+
+function filtrosAvalDaTela() {
+  const q = new URLSearchParams();
+  const produto = document.getElementById('fAvalProduto').value;
+  const situacao = document.getElementById('fAvalSituacao').value;
+  const nota = document.getElementById('fAvalNota').value;
+
+  if (produto) q.set('produtoId', produto);
+  if (situacao) q.set('visivel', situacao);
+  if (nota) q.set('nota', nota);
+
+  return q.toString();
+}
+
+async function carregarAvaliacoes() {
+  const busca = filtrosAvalDaTela();
+  const d = await api('/api/gestor/avaliacoes' + (busca ? '?' + busca : ''));
+
+  // Apagar o ultimo comentario de um produto tira o produto do seletor. Quando
+  // isso acontece o filtro passa a apontar para algo que nao esta mais na lista,
+  // e a tela mostraria "todos os produtos" com zero resultados — entao recarrega
+  // uma vez, ja sem o filtro perdido. Nao repete: na segunda passada nada e
+  // perdido e a funcao devolve false.
+  if (encherSeletorDeProduto(d.produtos)) {
+    carregarAvaliacoes();
+    return;
+  }
+
+  resumirFiltrosAval();
+
+  document.getElementById('resumoAval').classList.toggle('oculto', d.total === 0);
+  document.getElementById('resumoAval').innerHTML = `
+    <div><span class="rot">Total</span><span class="val">${d.total}</span></div>
+    <div><span class="rot">No ar</span><span class="val">${d.total - d.ocultas}</span></div>
+    <div><span class="rot">Fora do ar</span><span class="val">${d.ocultas}</span></div>
+    <div><span class="rot">Nesta lista</span><span class="val">${d.itens.length}</span></div>`;
+
+  document.getElementById('avalVazio').classList.toggle('oculto', d.itens.length > 0);
+
+  const caixa = document.getElementById('listaAval');
+
+  caixa.innerHTML = d.itens.map(a => `
+    <div class="aval" style="${a.visivel ? '' : 'opacity:.55'}">
+      <div class="topo-aval">
+        <span class="quem">${esc(a.nome)}</span>
+        ${estrelas(a.nota)}
+        <span class="tag ${a.visivel ? 'ok' : 'erro'}">${a.visivel ? 'no ar' : 'fora do ar'}</span>
+        <span class="quando">${dataLegivel(a.quando)}</span>
+      </div>
+
+      <p class="preco" style="margin:0 0 6px">
+        ${esc(a.produto)} &middot; ${esc(a.telefone)}
+      </p>
+
+      ${a.comentario
+        ? `<p style="white-space:pre-line;margin:0 0 10px">${esc(a.comentario)}</p>`
+        : '<p class="preco" style="margin:0 0 10px">(so a nota, sem comentario)</p>'}
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn pequeno ${a.visivel ? 'neutro' : ''}"
+                data-mudar="${esc(a.id)}" data-para="${a.visivel ? 'false' : 'true'}">
+          ${a.visivel ? 'Tirar do ar' : 'Voltar ao ar'}
+        </button>
+        <button class="btn pequeno perigo" data-apagar="${esc(a.id)}">Apagar</button>
+      </div>
+    </div>`).join('');
+
+  caixa.querySelectorAll('[data-mudar]').forEach(b => {
+    b.onclick = async () => {
+      try {
+        await api('/api/gestor/avaliacoes/' + b.dataset.mudar, {
+          method: 'PUT',
+          body: JSON.stringify({ visivel: b.dataset.para === 'true' })
+        });
+        carregarAvaliacoes();
+      } catch (e) { aviso(msg, e.message); }
+    };
+  });
+
+  caixa.querySelectorAll('[data-apagar]').forEach(b => {
+    b.onclick = async () => {
+      if (!confirm('Apagar esta avaliacao de vez? Nao da para desfazer.\n\n'
+                 + 'Se a ideia e so tirar do site, use "Tirar do ar".')) return;
+      try {
+        await api('/api/gestor/avaliacoes/' + b.dataset.apagar, { method: 'DELETE' });
+        carregarAvaliacoes();
+      } catch (e) { aviso(msg, e.message); }
+    };
+  });
+}
+
+// So repovoa quando a lista de produtos mudou de verdade: reconstruir o select a
+// cada carga apagaria a escolha do usuario no meio do uso.
+// Devolve true se o produto que estava filtrado saiu do seletor.
+function encherSeletorDeProduto(produtos) {
+  const seletor = document.getElementById('fAvalProduto');
+  const assinatura = produtos.map(p => p.id + p.quantas).join('|');
+
+  if (seletor.dataset.assinatura === assinatura) return false;
+  seletor.dataset.assinatura = assinatura;
+
+  const escolhido = seletor.value;
+
+  seletor.innerHTML = '<option value="">Todos os produtos</option>'
+    + produtos.map(p =>
+        `<option value="${esc(p.id)}">${esc(p.nome)} (${p.quantas})</option>`).join('');
+
+  // Atribuir um valor que nao existe entre as opcoes deixa o select em "".
+  seletor.value = escolhido;
+
+  return escolhido !== '' && seletor.value === '';
+}
+
+function resumirFiltrosAval() {
+  const rotulo = id => {
+    const s = document.getElementById(id);
+    return s.value ? s.options[s.selectedIndex].text : '';
+  };
+
+  const partes = [
+    rotulo('fAvalProduto') || 'todos os produtos',
+    rotulo('fAvalSituacao'),
+    rotulo('fAvalNota')
+  ].filter(Boolean);
+
+  document.getElementById('avalResumo').textContent = partes.join(' · ');
+}
+
+function limparFiltrosAval() {
+  ['fAvalProduto', 'fAvalSituacao', 'fAvalNota'].forEach(id =>
+    document.getElementById(id).value = '');
+
+  carregarAvaliacoes();
 }
 
 function limparProduto() {
@@ -1541,7 +1764,7 @@ async function carregarAgenda() {
           <br><span class="preco">${soDia(a.inicio)}</span></td>
       <td><strong>${a.cliente ? esc(a.cliente) : 'sem nome'}</strong>
           <br><span class="preco">${esc(a.telefone)}</span></td>
-      <td>${esc(a.servico)}<br><span class="preco">${a.duracao} min</span></td>
+      <td>${esc(a.servico)}<br><span class="preco">${a.duracao} min</span>${tagsDeProduto(a.produtos)}</td>
       <td class="num"><strong>${moeda(a.precoCentavos)}</strong></td>
       <td>${esc(a.barbeiro)}</td>
       <td><span class="tag ${a.status === 'Cancelado' ? 'erro' : 'ok'}">${esc(a.status)}</span>

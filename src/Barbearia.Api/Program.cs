@@ -123,6 +123,13 @@ builder.Services.AddRateLimiter(o =>
         ChaveIp(ctx),
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 12, Window = TimeSpan.FromMinutes(1) }));
 
+    // Avaliacao e pedido de produto sao gravacoes sem login. O indice unico ja
+    // impede a mesma pessoa avaliar duas vezes o mesmo produto; este limite corta
+    // quem tenta varrer produtos trocando de telefone.
+    o.AddPolicy("vitrine", ctx => RateLimitPartition.GetFixedWindowLimiter(
+        ChaveIp(ctx),
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 20, Window = TimeSpan.FromMinutes(1) }));
+
     static string ChaveIp(HttpContext ctx) =>
         ctx.Connection.RemoteIpAddress?.ToString() ?? "desconhecido";
 });
@@ -230,6 +237,7 @@ app.MapAuth();
 app.MapPublico();
 app.MapGestor();
 app.MapCatalogo();
+app.MapVitrine();
 app.MapPermissoes();
 app.MapDashboard();
 app.MapAdmin();
