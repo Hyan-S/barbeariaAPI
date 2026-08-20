@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=202608171445">
 <script>document.documentElement.dataset.tema =
   localStorage.getItem('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro');</script>
-<link rel="stylesheet" href="app.css?v=202608172210">
+<link rel="stylesheet" href="app.css?v=202608201700">
 <style>
   /* Cada etapa mostra um card baixo, entao sobrava uma faixa vazia enorme no
      fim da tela. Em coluna flex, margin-block:auto centraliza o card na sobra
@@ -162,10 +162,72 @@
     <button class="btn neutro" style="width:100%" onclick="location.reload()">Fazer outro agendamento</button>
   </div>
 
-  <div id="fluxo">
+  <div class="card oculto" id="acesso">
+    <h2 id="tituloAcesso">Entre para agendar</h2>
+    <p class="ajuda" style="margin-bottom:16px">
+      Seu telefone e a sua identificacao. Com a conta voce marca, acompanha e cancela
+      seus horarios quando quiser.
+    </p>
+
+    <div class="abas" id="abasAcesso" role="tablist">
+      <button type="button" class="ativa" data-aba="entrar" role="tab" aria-selected="true">Entrar</button>
+      <button type="button" data-aba="cadastro" role="tab" aria-selected="false">Criar cadastro</button>
+    </div>
+
+    <div id="formEntrar">
+      <div class="campo">
+        <label for="loginTelefone">Telefone</label>
+        <input id="loginTelefone" placeholder="(11) 9 8765-4321" autocomplete="username">
+      </div>
+      <div class="campo">
+        <label for="loginSenha">Senha</label>
+        <input id="loginSenha" type="password" autocomplete="current-password">
+      </div>
+      <button class="btn" style="width:100%" id="btnEntrar">Entrar</button>
+    </div>
+
+    <div id="formCadastro" class="oculto">
+      <div class="campo">
+        <label for="novoNome">Nome</label>
+        <input id="novoNome" placeholder="Como podemos te chamar" autocomplete="name">
+      </div>
+      <div class="campo">
+        <label for="novoTelefone">Telefone</label>
+        <input id="novoTelefone" placeholder="(11) 9 8765-4321" autocomplete="username">
+      </div>
+      <div class="campo">
+        <label for="novaSenha">Senha</label>
+        <input id="novaSenha" type="password" autocomplete="new-password">
+        <p class="ajuda">No minimo 6 caracteres.</p>
+      </div>
+      <button class="btn" style="width:100%" id="btnCadastrar">Criar cadastro e entrar</button>
+    </div>
+  </div>
+
+  <div id="fluxo" class="oculto">
     <div class="card oculto" id="cardMeus">
       <h2>Seus horarios</h2>
       <div id="meus"></div>
+    </div>
+
+    <div class="card oculto" id="cardConta">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <h2 style="margin:0">Minha conta</h2>
+        <button class="btn pequeno neutro" id="abrirTrocaSenha" type="button">Trocar senha</button>
+      </div>
+
+      <div class="oculto" id="formTrocaSenha" style="margin-top:14px">
+        <div class="campo">
+          <label for="senhaAtual">Senha atual</label>
+          <input id="senhaAtual" type="password" autocomplete="current-password">
+        </div>
+        <div class="campo">
+          <label for="senhaNova">Nova senha</label>
+          <input id="senhaNova" type="password" autocomplete="new-password">
+          <p class="ajuda">No minimo 6 caracteres. Trocar desconecta os outros aparelhos.</p>
+        </div>
+        <button class="btn" style="width:100%" id="btnTrocarSenha" type="button">Salvar senha</button>
+      </div>
     </div>
 
     <div class="card">
@@ -197,16 +259,9 @@
       </div>
 
       <div class="passo oculto" id="passoDados">
-        <h3>Seus dados</h3>
+        <h3>Confirmar</h3>
         <div class="resumo" id="resumoParcial"></div>
-        <div class="campo">
-          <label for="nome">Nome</label>
-          <input id="nome" placeholder="Como podemos te chamar">
-        </div>
-        <div class="campo">
-          <label for="telefone">WhatsApp com DDD</label>
-          <input id="telefone" inputmode="numeric" placeholder="11987654321">
-        </div>
+        <p class="ajuda" id="agendandoComo"></p>
       </div>
 
       <button class="btn oculto" style="width:100%" id="confirmar">Confirmar agendamento</button>
@@ -214,7 +269,7 @@
   </div>
 </main>
 
-<script src="app.js?v=202608172210"></script>
+<script src="app.js?v=202608201700"></script>
 <script>
 const msg = document.getElementById('msg');
 const token = new URLSearchParams(location.search).get('t');
@@ -226,7 +281,7 @@ let slotEscolhido = null;
 
 let profissionalEscolhido = null;
 
-const PASSOS = ['Servico', 'Profissional', 'Dia', 'Horario', 'Dados'];
+const PASSOS = ['Servico', 'Profissional', 'Dia', 'Horario', 'Confirmar'];
 
 iniciar();
 
@@ -236,6 +291,9 @@ function montarCabecalho() {
   if (token) {
     acoes = `<span class="quem" id="quemCliente"></span>
       <button class="btn pequeno neutro" onclick="sairDoLink()">Sair</button>`;
+  } else if (ClienteAuth.token) {
+    acoes = `<span class="quem" id="quemCliente">${esc(ClienteAuth.nome || '')}</span>
+      <button class="btn pequeno neutro" onclick="ClienteAuth.sair()">Sair</button>`;
   } else if (Auth.token) {
     acoes = `<span class="quem">${Auth.nome || ''}</span>
       <a class="btn pequeno neutro" href="painel.html" style="text-decoration:none">Painel</a>
@@ -266,7 +324,21 @@ async function iniciar() {
 
   document.getElementById('confirmar').onclick = confirmar;
 
-  if (token) await carregarSessao();
+  ligarMascarasTelefone('loginTelefone', 'novoTelefone');
+  ligarAcesso();
+
+  // O link do WhatsApp identifica a pessoa sem senha, entao continua valendo e
+  // dispensa o login. Fora dele, so entra quem tem conta.
+  if (token) {
+    if (!await carregarSessao()) return;
+  } else if (ClienteAuth.token) {
+    if (!await carregarMinhaConta()) return;
+  } else {
+    document.getElementById('acesso').classList.remove('oculto');
+    return;
+  }
+
+  document.getElementById('fluxo').classList.remove('oculto');
 
   servicos = await api('/api/servicos');
 
@@ -372,37 +444,199 @@ function montarDias() {
   });
 }
 
+
+// ---------- Acesso do cliente ----------
+
+function ligarAcesso() {
+  document.querySelectorAll('#abasAcesso button').forEach(b =>
+    b.onclick = () => trocarAbaAcesso(b.dataset.aba));
+
+  document.getElementById('btnEntrar').onclick = entrar;
+  document.getElementById('btnCadastrar').onclick = cadastrar;
+
+  document.getElementById('abrirTrocaSenha').onclick = () =>
+    document.getElementById('formTrocaSenha').classList.toggle('oculto');
+
+  document.getElementById('btnTrocarSenha').onclick = trocarSenha;
+
+  ['senhaAtual', 'senhaNova'].forEach(id =>
+    document.getElementById(id).onkeydown = e => { if (e.key === 'Enter') trocarSenha(); });
+
+  // Enter envia o formulario que estiver aberto. Sao dois blocos soltos e nao um
+  // <form>, entao esse atalho, que a pessoa espera de qualquer tela de login,
+  // precisa ser ligado na mao.
+  ['loginTelefone', 'loginSenha'].forEach(id =>
+    document.getElementById(id).onkeydown = e => { if (e.key === 'Enter') entrar(); });
+
+  ['novoNome', 'novoTelefone', 'novaSenha'].forEach(id =>
+    document.getElementById(id).onkeydown = e => { if (e.key === 'Enter') cadastrar(); });
+}
+
+function trocarAbaAcesso(qual) {
+  aviso(msg, '');
+
+  document.querySelectorAll('#abasAcesso button').forEach(b => {
+    const ativa = b.dataset.aba === qual;
+    b.classList.toggle('ativa', ativa);
+    b.setAttribute('aria-selected', ativa);
+  });
+
+  document.getElementById('formEntrar').classList.toggle('oculto', qual !== 'entrar');
+  document.getElementById('formCadastro').classList.toggle('oculto', qual !== 'cadastro');
+
+  document.getElementById('tituloAcesso').textContent =
+    qual === 'entrar' ? 'Entre para agendar' : 'Crie o seu cadastro';
+}
+
+async function entrar() {
+  await acessar('/api/cliente/login', {
+    telefone: document.getElementById('loginTelefone').value,
+    senha: document.getElementById('loginSenha').value
+  }, document.getElementById('btnEntrar'));
+}
+
+async function cadastrar() {
+  await acessar('/api/cliente/cadastro', {
+    nome: document.getElementById('novoNome').value,
+    telefone: document.getElementById('novoTelefone').value,
+    senha: document.getElementById('novaSenha').value
+  }, document.getElementById('btnCadastrar'));
+}
+
+async function acessar(rota, corpo, botao) {
+  aviso(msg, '');
+  botao.disabled = true;
+
+  try {
+    ClienteAuth.entrar(await api(rota, { method: 'POST', body: JSON.stringify(corpo) }));
+
+    // Recarrega em vez de so mostrar o fluxo: iniciar() sai cedo quando nao ha
+    // sessao, entao servicos, dias e horarios ainda nao foram carregados.
+    location.replace('agendar.html');
+  } catch (e) {
+    botao.disabled = false;
+
+    // Telefone que ja tem acesso: em vez de so mostrar o erro, leva para a aba de
+    // entrar com o numero ja preenchido, que e o que a pessoa queria fazer.
+    if (rota.endsWith('/cadastro') && e.status === 409) {
+      document.getElementById('loginTelefone').value =
+        document.getElementById('novoTelefone').value;
+      trocarAbaAcesso('entrar');
+      document.getElementById('loginSenha').focus();
+    }
+
+    aviso(msg, e.message);
+  }
+}
+
+// Devolve false quando a sessao nao vale mais, para iniciar() parar por ali.
+async function carregarMinhaConta() {
+  let conta;
+
+  try {
+    conta = await api('/api/cliente/me');
+  } catch {
+    // Token vencido ou cliente bloqueado. Limpa e mostra a tela de acesso em vez
+    // de deixar a pessoa em uma tela que nao responde.
+    ClienteAuth.limpar();
+    document.getElementById('acesso').classList.remove('oculto');
+    montarCabecalho();
+    return false;
+  }
+
+  ClienteAuth.entrar({ token: ClienteAuth.token, nome: conta.nome, telefone: conta.telefone });
+
+  const quem = document.getElementById('quemCliente');
+  if (quem) quem.textContent = conta.nome || conta.telefone;
+
+  document.getElementById('agendandoComo').textContent =
+    `Agendando como ${conta.nome} (${conta.telefone}).`;
+
+  document.getElementById('cardConta').classList.remove('oculto');
+
+  mostrarMeusHorarios(conta.agendamentos, id =>
+    api(`/api/cliente/agendamentos/${id}/cancelar`, { method: 'POST' }));
+
+  return true;
+}
+
+async function trocarSenha() {
+  const botao = document.getElementById('btnTrocarSenha');
+
+  aviso(msg, '');
+  botao.disabled = true;
+
+  try {
+    const sessao = await api('/api/cliente/senha', {
+      method: 'POST',
+      body: JSON.stringify({
+        senhaAtual: document.getElementById('senhaAtual').value,
+        novaSenha: document.getElementById('senhaNova').value
+      })
+    });
+
+    // O token novo tem de entrar no lugar do antigo agora: o servidor acabou de
+    // matar o anterior para desconectar os outros aparelhos, e sem esta troca a
+    // proxima chamada desta aba cairia como sessao expirada.
+    ClienteAuth.entrar(sessao);
+
+    document.getElementById('senhaAtual').value = '';
+    document.getElementById('senhaNova').value = '';
+    document.getElementById('formTrocaSenha').classList.add('oculto');
+
+    aviso(msg, 'Senha trocada. Os outros aparelhos foram desconectados.', 'ok');
+  } catch (e) {
+    aviso(msg, e.message);
+  } finally {
+    botao.disabled = false;
+  }
+}
+
+// Mesma lista para os dois caminhos de acesso; o que muda e como se cancela.
+function mostrarMeusHorarios(agendamentos, cancelar) {
+  const cartao = document.getElementById('cardMeus');
+
+  if (!agendamentos.length) { cartao.classList.add('oculto'); return; }
+
+  cartao.classList.remove('oculto');
+
+  document.getElementById('meus').innerHTML = agendamentos.map(a => `
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--linha)">
+      <span><strong>${dataLegivel(a.inicio)}</strong><br><span class="preco">${esc(a.servico)} com ${esc(a.barbeiro)}</span></span>
+      <button class="btn pequeno perigo" data-id="${esc(a.id)}">Cancelar</button>
+    </div>`).join('');
+
+  document.querySelectorAll('#meus button').forEach(b => {
+    b.onclick = async () => {
+      if (!confirm('Cancelar este horario?')) return;
+      b.disabled = true;
+      try { await cancelar(b.dataset.id); location.reload(); }
+      catch (e) { b.disabled = false; aviso(msg, e.message); }
+    };
+  });
+}
+// Caminho do link do WhatsApp: identifica a pessoa sem senha nenhuma.
 async function carregarSessao() {
   try {
     const sessao = await api('/api/sessao?t=' + encodeURIComponent(token));
 
-    document.getElementById('nome').value = sessao.nome || '';
-    document.getElementById('telefone').value = sessao.telefone || '';
-
     const quem = document.getElementById('quemCliente');
     if (quem) quem.textContent = sessao.nome || sessao.telefone || '';
 
-    if (sessao.agendamentos.length) {
-      document.getElementById('cardMeus').classList.remove('oculto');
-      document.getElementById('meus').innerHTML = sessao.agendamentos.map(a => `
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--linha)">
-          <span><strong>${dataLegivel(a.inicio)}</strong><br><span class="preco">${esc(a.servico)} com ${esc(a.barbeiro)}</span></span>
-          <button class="btn pequeno perigo" data-id="${esc(a.id)}">Cancelar</button>
-        </div>`).join('');
+    document.getElementById('agendandoComo').textContent =
+      `Agendando como ${sessao.nome || 'voce'} (${sessao.telefone}).`;
 
-      document.querySelectorAll('#meus button').forEach(b => {
-        b.onclick = async () => {
-          if (!confirm('Cancelar este horario?')) return;
-          try {
-            await api(`/api/agendamentos/${b.dataset.id}/cancelar?t=${encodeURIComponent(token)}`, { method: 'POST' });
-            location.reload();
-          } catch (e) { aviso(msg, e.message); }
-        };
-      });
-    }
+    mostrarMeusHorarios(sessao.agendamentos, id =>
+      api(`/api/agendamentos/${id}/cancelar?t=${encodeURIComponent(token)}`, { method: 'POST' }));
   } catch {
-    aviso(msg, 'Seu link expirou. Voce ainda pode agendar informando o telefone.', 'info');
+    // Sem link valido nao da mais para agendar como visitante, entao a saida e a
+    // mesma de quem chegou sem nada: a tela de acesso.
+    aviso(msg, 'Seu link expirou. Entre com o seu telefone e senha.', 'info');
+    document.getElementById('acesso').classList.remove('oculto');
+    return false;
   }
+
+  return true;
 }
 
 async function carregarHorarios() {
@@ -588,17 +822,21 @@ async function confirmar() {
   botao.disabled = true;
 
   try {
-    const resultado = await api('/api/agendamentos', {
-      method: 'POST',
-      body: JSON.stringify({
-        token: token,
-        nome: document.getElementById('nome').value,
-        telefone: document.getElementById('telefone').value,
-        servicoId: servicoEscolhido.id,
-        inicioUtc: slotEscolhido.inicioUtc,
-        barbeiroId: profissionalEscolhido?.id || null
-      })
-    });
+    const corpo = {
+      servicoId: servicoEscolhido.id,
+      inicioUtc: slotEscolhido.inicioUtc,
+      barbeiroId: profissionalEscolhido?.id || null
+    };
+
+    // Quem e o cliente sai do link ou do token, nunca de um campo da tela: assim
+    // ninguem agenda em nome de outra pessoa mexendo no corpo da requisicao.
+    const resultado = token
+      ? await api('/api/agendamentos', {
+          method: 'POST', body: JSON.stringify({ ...corpo, token })
+        })
+      : await api('/api/cliente/agendamentos', {
+          method: 'POST', body: JSON.stringify(corpo)
+        });
 
     document.getElementById('resumoFinal').innerHTML =
       resumoHtml(resultado.inicio, resultado.barbeiro);

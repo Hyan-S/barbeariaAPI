@@ -1,3 +1,4 @@
+using Barbearia.Api.Seguranca;
 using Barbearia.Domain;
 using Barbearia.Domain.Entities;
 using Barbearia.Infrastructure.Data;
@@ -84,7 +85,8 @@ public static class CatalogoEndpoints
                 {
                     x.Id, x.Nome, x.Bloqueado, x.CriadoEmUtc,
                     telefone = TelefoneBr.Formatar(x.Telefone),
-                    agendamentos = x.Agendamentos.Count(a => a.Status != StatusAgendamento.Cancelado)
+                    agendamentos = x.Agendamentos.Count(a => a.Status != StatusAgendamento.Cancelado),
+                    temAcesso = x.SenhaHash != null
                 })
                 .ToListAsync();
 
@@ -107,6 +109,9 @@ public static class CatalogoEndpoints
             {
                 cliente.Id, cliente.Nome, cliente.Bloqueado,
                 telefone = TelefoneBr.Formatar(cliente.Telefone),
+                temAcesso = cliente.SenhaHash != null,
+                acessoDesde = cliente.SenhaDefinidaEmUtc is null
+                    ? (DateTime?)null : Fuso.ParaLocal(cliente.SenhaDefinidaEmUtc.Value),
                 historico = historico.Select(a => new
                 {
                     inicio = Fuso.ParaLocal(a.InicioUtc),
@@ -124,6 +129,31 @@ public static class CatalogoEndpoints
 
             cliente.Nome = (req.Nome ?? "").Trim();
             cliente.Bloqueado = req.Bloqueado;
+
+            await db.SaveChangesAsync();
+            return Results.Ok();
+        });
+
+        // Cliente que esquece a senha nao tinha saida nenhuma: o cadastro recusa
+        // porque ja existe acesso, e nao ha e-mail nem SMS para mandar link. Zerar
+        // apaga so a senha — nome, telefone e historico ficam onde estao — e a pessoa
+        // cadastra de novo pela tela de sempre. O token que ela tivesse na mao morre
+        // na hora, porque o /api/cliente recusa quem esta sem hash.
+        c.MapPost("/{id:guid}/zerar-acesso", async (Guid id, AppDbContext db) =>
+        {
+            var cliente = await db.Clientes.FirstOrDefaultAsync(x => x.Id == id);
+            if (cliente is null) return Results.NotFound();
+
+            if (cliente.SenhaHash is null)
+                return Results.BadRequest(new { erro = "Este cliente ainda nao criou acesso" });
+
+            cliente.SenhaHash = null;
+            cliente.SenhaDefinidaEmUtc = null;
+
+            // Sobe o selo tambem. Apagar o hash ja derruba a sessao agora, mas quando
+            // a pessoa recadastrar o hash volta a existir — e sem o selo o token antigo
+            // (o do celular perdido, por exemplo) voltaria a valer junto com ele.
+            cliente.TokensValidosDesdeUtc = GuardaDeSessao.Segundo(DateTime.UtcNow);
 
             await db.SaveChangesAsync();
             return Results.Ok();

@@ -23,6 +23,12 @@ public class Barbeiro
 
     public bool PodeVerDashboard { get; set; }
 
+    // Corte de sessao. Todo token do painel carrega a claim "emitido"; se ela for
+    // anterior a este selo, o token nao vale mais. E o que faz desativar alguem,
+    // mexer na permissao dele ou trocar a senha valer na hora, e nao daqui a 8
+    // horas, quando o token venceria por conta propria.
+    public DateTime TokensValidosDesdeUtc { get; set; } = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
     public DateTime CriadoEmUtc { get; set; } = DateTime.UtcNow;
 
     public List<Expediente> Expedientes { get; set; } = [];

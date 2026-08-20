@@ -10,8 +10,7 @@ namespace Barbearia.Api.Endpoints;
 
 public static class PublicoEndpoints
 {
-    public record NovoAgendamento(
-        string? Telefone, string? Nome, Guid ServicoId, DateTime InicioUtc, Guid? BarbeiroId, string? Token);
+    public record NovoAgendamento(Guid ServicoId, DateTime InicioUtc, Guid? BarbeiroId, string? Token);
 
     public static void MapPublico(this IEndpointRouteBuilder app)
     {
@@ -101,14 +100,13 @@ public static class PublicoEndpoints
             if (!string.IsNullOrWhiteSpace(req.Token))
                 cliente = await links.ResolverAsync(req.Token);
 
+            // Sem link valido nao ha por onde agendar por aqui. Agendar so com nome
+            // e telefone soltos acabou: quem marca pelo site entra na conta e usa
+            // /api/cliente/agendamentos. Esta rota continua existindo para o link do
+            // WhatsApp, que identifica a pessoa sem ela ter senha.
             if (cliente is null)
-            {
-                var telefone = TelefoneBr.Normalizar(req.Telefone);
-                if (telefone is null)
-                    return Results.BadRequest(new { erro = "Informe um telefone valido com DDD" });
-
-                cliente = await servico.ObterOuCriarClienteAsync(telefone, req.Nome);
-            }
+                return Results.Json(
+                    new { erro = "Entre na sua conta para agendar" }, statusCode: 401);
 
             var resultado = await servico.CriarAsync(
                 cliente.Id, req.ServicoId, req.InicioUtc, req.BarbeiroId, OrigemAgendamento.Web);

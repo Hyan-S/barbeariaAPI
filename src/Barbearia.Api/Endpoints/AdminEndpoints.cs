@@ -1,3 +1,4 @@
+using Barbearia.Api.Seguranca;
 using Barbearia.Application.Acesso;
 using Barbearia.Application.Configuracao;
 using Barbearia.Application.WhatsApp;
@@ -5,6 +6,7 @@ using Barbearia.Domain;
 using Barbearia.Domain.Entities;
 using Barbearia.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Npgsql;
 
 namespace Barbearia.Api.Endpoints;
@@ -196,7 +198,8 @@ public static class AdminEndpoints
         });
 
         g.MapPut("/usuarios/{id:guid}", async (
-            Guid id, UsuarioRequest req, AppDbContext db, IHashDeSenha hash, ConfiguracaoService cfg) =>
+            Guid id, UsuarioRequest req, AppDbContext db, IHashDeSenha hash,
+            ConfiguracaoService cfg, IMemoryCache cache) =>
         {
             var usuario = await db.Barbeiros.FirstOrDefaultAsync(x => x.Id == id);
             if (usuario is null) return Results.NotFound();
@@ -221,6 +224,12 @@ public static class AdminEndpoints
                     return Results.BadRequest(new { erro = $"Limite de {limite} usuarios ativos atingido" });
             }
 
+            // O que estava valendo antes da edicao. Mudanca em qualquer um destes
+            // torna o token que a pessoa tem na mao mentiroso, entao a sessao cai.
+            // Trocar so o nome ou o telefone nao derruba ninguem.
+            var antes = (usuario.Perfil, usuario.Ativo, usuario.PodeGerenciarServicos,
+                         usuario.PodeGerenciarProdutos, usuario.PodeGerenciarClientes);
+
             usuario.Nome = req.Nome.Trim();
             usuario.Telefone = TelefoneBr.Normalizar(req.Telefone);
             usuario.Perfil = perfil;
@@ -230,13 +239,22 @@ public static class AdminEndpoints
             usuario.PodeGerenciarProdutos = req.PodeGerenciarProdutos;
             usuario.PodeGerenciarClientes = req.PodeGerenciarClientes;
 
+            var trocouSenha = false;
+
             if (!string.IsNullOrWhiteSpace(req.Senha))
             {
                 if (req.Senha.Length < 8)
                     return Results.BadRequest(new { erro = "Senha precisa de no minimo 8 caracteres" });
                 usuario.SenhaHash = hash.Gerar(req.Senha);
                 usuario.PrecisaTrocarSenha = true;
+                trocouSenha = true;
             }
+
+            var depois = (usuario.Perfil, usuario.Ativo, usuario.PodeGerenciarServicos,
+                          usuario.PodeGerenciarProdutos, usuario.PodeGerenciarClientes);
+
+            if (trocouSenha || antes != depois)
+                GuardaDeSessao.CortarSessoes(usuario, cache);
 
             await db.SaveChangesAsync();
             return Results.Ok();

@@ -1,6 +1,8 @@
+using Barbearia.Api.Seguranca;
 using Barbearia.Domain;
 using Barbearia.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Barbearia.Api.Endpoints;
 
@@ -49,7 +51,7 @@ public static class PermissoesEndpoints
             });
         });
 
-        g.MapPost("/permissoes", async (AlteracaoPermissao req, AppDbContext db) =>
+        g.MapPost("/permissoes", async (AlteracaoPermissao req, AppDbContext db, IMemoryCache cache) =>
         {
             if (!Catalogo.Any(p => p.Chave == req.Chave))
                 return Results.BadRequest(new { erro = "Permissao desconhecida" });
@@ -68,9 +70,15 @@ public static class PermissoesEndpoints
                 case "dashboard": pessoa.PodeVerDashboard = req.Concedida; break;
             }
 
+            // A permissao vive dentro do token, entao mexer nela sem derrubar a
+            // sessao nao mudava nada ate a pessoa entrar de novo — era isso que o
+            // antigo "aplicadoNoProximoLogin" contava. Agora o token velho morre e
+            // a mudanca vale na hora.
+            GuardaDeSessao.CortarSessoes(pessoa, cache);
+
             await db.SaveChangesAsync();
 
-            return Results.Ok(new { aplicadoNoProximoLogin = true });
+            return Results.Ok(new { sessaoEncerrada = true });
         });
     }
 }

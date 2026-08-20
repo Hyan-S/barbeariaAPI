@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=202608171445">
 <script>document.documentElement.dataset.tema =
   localStorage.getItem('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro');</script>
-<link rel="stylesheet" href="app.css?v=202608172210">
+<link rel="stylesheet" href="app.css?v=202608201700">
 </head>
 <body>
 <header class="topo" id="topo"></header>
@@ -60,7 +60,7 @@
             </div>
             <div class="campo">
               <label for="agTelefone">Telefone com DDD</label>
-              <input id="agTelefone" inputmode="numeric" placeholder="11987654321">
+              <input id="agTelefone" inputmode="numeric" placeholder="(11) 9 8765-4321">
             </div>
           </div>
           <p class="ajuda">O cadastro e criado junto com o agendamento.</p>
@@ -204,7 +204,8 @@
         o dashboard e a unica coisa que ele so ve se voce liberar.
       </p>
       <div id="permAviso" class="aviso info">
-        A mudanca vale no proximo login da pessoa, porque o acesso viaja no token da sessao.
+        Salvar derruba a sessao da pessoa na hora: o acesso antigo para de valer no mesmo
+        instante, e o novo passa a valer quando ela entrar de novo.
       </div>
       <div class="rolagem"><table>
         <thead><tr id="permCabecalho"></tr></thead>
@@ -624,6 +625,16 @@
         </div>
       </div>
 
+      <div class="linha">
+        <div class="campo">
+          <label>Acesso do cliente</label>
+          <p class="ajuda" id="acessoCliente"></p>
+        </div>
+        <div class="campo" style="display:flex;align-items:flex-end">
+          <button class="btn neutro oculto" id="zerarAcesso" type="button">Zerar acesso</button>
+        </div>
+      </div>
+
       <button class="btn" id="salvarCliente">Salvar</button>
       <button class="btn neutro" id="fecharCliente">Fechar</button>
 
@@ -749,7 +760,7 @@
       <div class="linha">
         <div class="campo">
           <label for="numeroExibicao">Numero do WhatsApp da barbearia</label>
-          <input id="numeroExibicao" placeholder="11987654321">
+          <input id="numeroExibicao" placeholder="(11) 9 8765-4321">
           <p class="ajuda">So para exibir ao cliente. Nao e usado no envio.</p>
         </div>
         <div class="campo">
@@ -794,7 +805,7 @@
       <div class="linha">
         <div class="campo">
           <label for="telTeste">Telefone com DDD</label>
-          <input id="telTeste" placeholder="11987654321">
+          <input id="telTeste" placeholder="(11) 9 8765-4321">
         </div>
         <div class="campo" style="display:flex;align-items:flex-end">
           <button class="btn neutro" id="testar">Enviar teste</button>
@@ -837,7 +848,7 @@
         </div>
         <div class="campo">
           <label for="uTelefone">Telefone</label>
-          <input id="uTelefone" inputmode="numeric" placeholder="11987654321">
+          <input id="uTelefone" inputmode="numeric" placeholder="(11) 9 8765-4321">
         </div>
       </div>
 
@@ -907,7 +918,7 @@
 </main>
 </div>
 
-<script src="app.js?v=202608172210"></script>
+<script src="app.js?v=202608201700"></script>
 <script>
 const msg = document.getElementById('msg');
 let barbeiros = [];
@@ -917,6 +928,11 @@ const SO_ADMIN = [];
 
 function iniciar() {
   document.getElementById('topo').innerHTML = montarTopo('Painel', true);
+
+  // Campos de um numero so. Ficam de fora a busca da agenda e a de pessoas, que
+  // tambem aceitam nome, e a lista de numeros permitidos do WhatsApp, que guarda
+  // varios numeros separados por virgula.
+  ligarMascarasTelefone('agTelefone', 'uTelefone', 'telTeste', 'numeroExibicao');
 
   menuLateral(document.getElementById('menu'), [
     {
@@ -1001,6 +1017,7 @@ function iniciar() {
     document.getElementById('btnBuscar').onclick = carregarClientes;
     document.getElementById('buscaCliente').onkeydown = e => { if (e.key === 'Enter') carregarClientes(); };
     document.getElementById('salvarCliente').onclick = salvarCliente;
+    document.getElementById('zerarAcesso').onclick = zerarAcessoCliente;
     document.getElementById('fecharCliente').onclick =
       () => document.getElementById('cardCliente').classList.add('oculto');
     carregarClientes();
@@ -1159,8 +1176,10 @@ async function carregarHorariosPainel() {
 }
 
 function atualizarBotaoAgendar() {
+  // Conta digitos, e nao caracteres: com a mascara ligada, "(11) 9 87" ja passa de
+  // 10 caracteres e liberaria o botao com meio numero digitado.
   const temPessoa = agCliente
-    || (document.getElementById('agTelefone').value.trim().length >= 10);
+    || apenasDigitos(document.getElementById('agTelefone').value).length >= 10;
   document.getElementById('agConfirmar').disabled = !(agSlot && temPessoa);
 }
 
@@ -1492,7 +1511,7 @@ async function carregarClientes() {
       <td>${c.nome ? esc(c.nome) : '<span class="preco">sem nome</span>'}</td>
       <td>${esc(c.telefone)}</td>
       <td>${c.agendamentos}</td>
-      <td><span class="tag ${c.bloqueado ? 'erro' : 'ok'}">${c.bloqueado ? 'bloqueado' : 'ativo'}</span></td>
+      <td><span class="tag ${c.bloqueado ? 'erro' : 'ok'}">${c.bloqueado ? 'bloqueado' : 'ativo'}</span>${c.temAcesso ? ' <span class="tag">com acesso</span>' : ''}</td>
       <td><button class="btn pequeno neutro" data-id="${esc(c.id)}">Abrir</button></td>
     </tr>`).join('');
 
@@ -1519,8 +1538,34 @@ async function abrirCliente(id) {
         </tr>`).join('')
     : '<tr><td colspan="4" class="vazio">Sem agendamentos.</td></tr>';
 
+  // Quem tem senha entra sozinho em agendar.html; quem nao tem depende do balcao
+  // ou do link do WhatsApp. O dono precisa ver essa diferenca para saber se tem o
+  // que zerar quando a pessoa liga dizendo que esqueceu a senha.
+  document.getElementById('acessoCliente').textContent = c.temAcesso
+    ? 'Entra com telefone e senha' + (c.acessoDesde ? ', desde ' + dataLegivel(c.acessoDesde) : '') + '.'
+    : 'Sem senha criada. Marca pelo balcao ou pelo link do WhatsApp.';
+
+  document.getElementById('zerarAcesso').classList.toggle('oculto', !c.temAcesso);
+
   document.getElementById('cardCliente').classList.remove('oculto');
   document.getElementById('cardCliente').scrollIntoView({ behavior: 'smooth' });
+}
+
+// Zerar apaga so a senha: o cliente, o telefone e o historico ficam onde estao. E
+// a unica saida para quem esqueceu a senha, porque o cadastro recusa telefone que
+// ja tem acesso e nao ha e-mail nem SMS para mandar link de recuperacao.
+async function zerarAcessoCliente() {
+  const id = document.getElementById('clienteId').value;
+
+  if (!confirm('Zerar o acesso deste cliente? Ele perde a senha e precisa criar o cadastro de novo. O historico nao e apagado.')) return;
+
+  aviso(msg, '');
+  try {
+    await api('/api/clientes/' + id + '/zerar-acesso', { method: 'POST' });
+    await abrirCliente(id);
+    carregarClientes();
+    aviso(msg, 'Acesso zerado. O cliente ja pode criar a senha de novo.', 'ok');
+  } catch (e) { aviso(msg, e.message); }
 }
 
 async function salvarCliente() {
@@ -2028,7 +2073,7 @@ function aplicarConfig(c) {
   document.getElementById('habilitado').checked = !!c['whatsapp.habilitado'];
   document.getElementById('verify').value = c['whatsapp.verifyToken'] || '';
   document.getElementById('phoneId').value = c['whatsapp.phoneNumberId'] || '';
-  document.getElementById('numeroExibicao').value = c['whatsapp.numeroExibicao'] || '';
+  document.getElementById('numeroExibicao').value = mascaraTelefone(c['whatsapp.numeroExibicao']);
   document.getElementById('numeros').value = c['whatsapp.numerosPermitidos'] || '';
   document.getElementById('appSecret').value = '';
   document.getElementById('accessToken').value = '';
@@ -2136,7 +2181,7 @@ function editarUsuario(u) {
   document.getElementById('uEmail').disabled = true;
   document.getElementById('uSenha').value = '';
   document.getElementById('uSenha').placeholder = 'deixe vazio para manter';
-  document.getElementById("uTelefone").value = u.telefone || "";
+  document.getElementById("uTelefone").value = mascaraTelefone(u.telefone);
   document.getElementById('uPerfil').value = u.perfil;
   document.getElementById('uAtende').checked = u.atende;
   document.getElementById('uAtivo').checked = u.ativo;
@@ -2228,7 +2273,7 @@ async function carregarPermissoes() {
             barbeiroId: c.dataset.pessoa, chave: c.dataset.chave, concedida: c.checked
           })
         });
-        aviso(msg, 'Permissao salva. Vale no proximo login da pessoa.', 'ok');
+        aviso(msg, 'Permissao salva. A pessoa foi desconectada e entra de novo com o acesso novo.', 'ok');
       } catch (e) {
         c.checked = !c.checked;
         aviso(msg, e.message);

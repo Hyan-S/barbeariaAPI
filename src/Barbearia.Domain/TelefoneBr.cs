@@ -47,12 +47,20 @@ public static class TelefoneBr
         return variantes;
     }
 
+    // Mesmo formato da mascara dos campos, para o numero nao mudar de cara entre o
+    // que a pessoa digita e o que a tela devolve depois. O canonico tem 13 digitos
+    // no celular (55 + DDD + 9 digitos) e 12 no fixo — antes so o celular era
+    // formatado e o fixo saia cru, como "551134567890".
     public static string Formatar(string canonico)
     {
-        if (canonico.Length != 13) return canonico;
+        if (canonico.Length is not (12 or 13)) return canonico;
+
         var ddd = canonico.Substring(2, 2);
         var numero = canonico[4..];
-        return $"({ddd}) {numero[..5]}-{numero[5..]}";
+
+        return numero.Length == 9
+            ? $"({ddd}) {numero[0]} {numero[1..5]}-{numero[5..]}"
+            : $"({ddd}) {numero[..4]}-{numero[4..]}";
     }
 
     private static string SomenteDigitos(string entrada)

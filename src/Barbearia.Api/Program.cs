@@ -2,6 +2,7 @@ using System.Text;
 using System.Threading.RateLimiting;
 using Barbearia.Api;
 using Barbearia.Api.Endpoints;
+using Barbearia.Api.Seguranca;
 using Barbearia.Api.WhatsApp;
 using Barbearia.Domain;
 using Barbearia.Infrastructure;
@@ -155,7 +156,10 @@ builder.Services.AddAuthorizationBuilder()
     .AddPolicy("Produtos", p => p.RequireAssertion(c => Permitido(c.User, "produtos")))
     .AddPolicy("Clientes", p => p.RequireAssertion(c => Permitido(c.User, "clientes")))
     .AddPolicy("Dashboard", p => p.RequireAssertion(c =>
-        SenhaOk(c.User) && (EhAdmin(c.User) || c.User.HasClaim("perm", "dashboard"))));
+        SenhaOk(c.User) && (EhAdmin(c.User) || c.User.HasClaim("perm", "dashboard"))))
+    // Area do cliente. Exige o papel exato: um token do painel nao serve aqui, senao
+    // o "sub" de um barbeiro seria lido como se fosse o Id de um cliente.
+    .AddPolicy("Cliente", p => p.RequireAssertion(c => c.User.IsInRole(Papeis.Cliente)));
 
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p
     .WithOrigins(builder.Configuration["App:OrigensPermitidas"]?.Split(',',
@@ -229,6 +233,12 @@ app.UseStaticFiles(new StaticFileOptions
 app.UseCors();
 app.UseRateLimiter();
 app.UseAuthentication();
+
+// Depois do UseAuthentication (precisa do ctx.User pronto) e antes do
+// UseAuthorization: token de funcionario desativado, com permissao trocada ou com
+// a senha alterada morre aqui, sem chegar em policy nenhuma.
+app.UseGuardaDeSessao();
+
 app.UseAuthorization();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok", agora = Fuso.AgoraLocal() }));
@@ -238,6 +248,7 @@ app.MapPublico();
 app.MapGestor();
 app.MapCatalogo();
 app.MapVitrine();
+app.MapCliente();
 app.MapPermissoes();
 app.MapDashboard();
 app.MapAdmin();

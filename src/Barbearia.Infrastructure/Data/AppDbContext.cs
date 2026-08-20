@@ -126,6 +126,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasKey(x => x.Id);
             e.Property(x => x.Telefone).HasMaxLength(20).IsRequired();
             e.Property(x => x.Nome).HasMaxLength(120);
+            e.Property(x => x.SenhaHash).HasMaxLength(100);
+
+            // O telefone ja era unico para nao duplicar cliente; agora ele tambem e
+            // o nome de usuario com que a pessoa entra em agendar.html.
             e.HasIndex(x => x.Telefone).IsUnique();
         });
 

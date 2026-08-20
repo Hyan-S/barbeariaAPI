@@ -27,3 +27,11 @@ public enum TipoPedido
     Usar = 0,
     Comprar = 1
 }
+
+public static class Papeis
+{
+    // O papel do cliente e uma string fora do enum Perfil de proposito. As politicas
+    // do painel sao escritas em cima de Perfil, entao um token de cliente nao casa
+    // com nenhuma delas mesmo sendo assinado com a mesma chave.
+    public const string Cliente = "Cliente";
+}

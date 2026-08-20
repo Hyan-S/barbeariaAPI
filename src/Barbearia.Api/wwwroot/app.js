@@ -51,7 +51,14 @@ const Auth = {
   },
 
   sair() {
+    // Preserva a sessao do cliente: sair do painel nao pode deslogar o dono da
+    // propria area de agendamento dele.
+    const cliente = ['cliente.token', 'cliente.nome', 'cliente.telefone']
+      .map(k => [k, localStorage.getItem(k)]);
+
     localStorage.clear();
+    cliente.forEach(([k, v]) => { if (v !== null) localStorage.setItem(k, v); });
+
     location.href = 'index.html';
   },
 
@@ -71,6 +78,31 @@ const Auth = {
       return false;
     }
     return true;
+  }
+};
+
+// Sessao do cliente, separada da do painel. Chaves com prefixo proprio porque as
+// duas podem coexistir no mesmo navegador: o dono da barbearia tambem e cliente de
+// si mesmo, e o Auth.sair() do painel faz localStorage.clear().
+const ClienteAuth = {
+  get token() { return localStorage.getItem('cliente.token'); },
+  get nome() { return localStorage.getItem('cliente.nome'); },
+  get telefone() { return localStorage.getItem('cliente.telefone'); },
+
+  entrar(dados) {
+    localStorage.setItem('cliente.token', dados.token);
+    localStorage.setItem('cliente.nome', dados.nome || '');
+    localStorage.setItem('cliente.telefone', dados.telefone || '');
+  },
+
+  limpar() {
+    ['cliente.token', 'cliente.nome', 'cliente.telefone']
+      .forEach(k => localStorage.removeItem(k));
+  },
+
+  sair() {
+    this.limpar();
+    location.replace('agendar.html');
   }
 };
 
@@ -112,6 +144,14 @@ const ROTULOS = [
   ['POST',   /^\/api\/produtos$/,                               'Salvando o produto',         'Produto salvo'],
   ['PUT',    /^\/api\/produtos\/[^/]+$/,                        'Salvando o produto',         'Produto salvo'],
   ['DELETE', /^\/api\/produtos\/[^/]+$/,                        'Removendo o produto',        'Produto removido'],
+
+  ['POST',   /^\/api\/cliente\/cadastro$/,                'Criando seu cadastro',       'Cadastro criado'],
+  ['POST',   /^\/api\/cliente\/login$/,                   'Entrando',                   'Bem-vindo'],
+  ['GET',    /^\/api\/cliente\/me$/,                      'Carregando sua conta',       'Conta carregada'],
+  ['POST',   /^\/api\/cliente\/agendamentos$/,            'Confirmando o horario',      'Horario confirmado'],
+  ['POST',   /^\/api\/cliente\/agendamentos\/[^/]+\/cancelar$/, 'Cancelando o horario',  'Horario cancelado'],
+  ['POST',   /^\/api\/cliente\/senha$/,                    'Trocando a senha',           'Senha trocada'],
+  ['POST',   /^\/api\/clientes\/[^/]+\/zerar-acesso$/,       'Zerando o acesso',           'Acesso zerado'],
 
   ['GET',    /^\/api\/vitrine\/produtos$/,                      'Carregando produtos',        'Produtos carregados'],
   ['POST',   /^\/api\/vitrine\/produtos\/[^/]+\/avaliacoes$/,   'Enviando a avaliacao',       'Avaliacao enviada'],
@@ -208,7 +248,14 @@ async function api(caminho, opcoes = {}) {
   Rede.comecou(rotulo.fazendo);
 
   const cabecalhos = { 'Content-Type': 'application/json', ...(opcoes.headers || {}) };
-  if (Auth.token) cabecalhos['Authorization'] = 'Bearer ' + Auth.token;
+
+  // Qual sessao mandar e decidido pela rota, nao por qual token existe. O dono da
+  // barbearia pode estar logado nos dois papeis ao mesmo tempo; mandar o token do
+  // painel para /api/cliente daria 403, e o token do cliente no painel daria 401.
+  const paraCliente = caminho.startsWith('/api/cliente');
+  const portador = paraCliente ? ClienteAuth.token : Auth.token;
+
+  if (portador) cabecalhos['Authorization'] = 'Bearer ' + portador;
 
   let resposta;
   try {
@@ -218,9 +265,11 @@ async function api(caminho, opcoes = {}) {
     throw new Error('Sem conexao com o servidor');
   }
 
-  if (resposta.status === 401 && Auth.token) {
+  // So derruba a sessao se havia uma para derrubar: o 401 de senha errada no
+  // login chega sem token e nao pode virar "sessao expirada".
+  if (resposta.status === 401 && portador) {
     Rede.terminou('erro', 'Sessao expirada');
-    Auth.sair();
+    if (paraCliente) ClienteAuth.sair(); else Auth.sair();
     throw new Error('Sessao expirada');
   }
 
@@ -271,6 +320,102 @@ function esc(valor) {
 
 function moeda(centavos) {
   return (centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+// ---------- Telefone ----------
+
+// Mascara de digitacao: (11) 9 8765-4321.
+// O formato sai do primeiro digito depois do DDD, e nao da quantidade digitada:
+// no Brasil celular sempre comeca com 9 e fixo comeca com 2-5. Decidir assim
+// evita o campo pular de "(11) 9876-5432" para "(11) 9 8765-4321" no meio da
+// digitacao, que e o que acontece quando a mascara espera o numero terminar.
+// Fixo fica (11) 3456-7890 — impor o formato de celular nele escreveria um
+// numero que nao existe.
+function mascaraTelefone(bruto) {
+  let digitos = String(bruto ?? '').replace(/\D/g, '');
+
+  // Numero colado da agenda do celular ou do WhatsApp vem com o codigo do pais:
+  // 55 + DDD + 8 ou 9 digitos. So tira o 55 quando o que sobra ainda e um numero
+  // inteiro, porque DDD 55 existe (Santa Maria, RS) — em um numero de 11 digitos
+  // comecando com 55 o proprio 55 e o DDD.
+  if (digitos.length > 11 && digitos.startsWith('55')) digitos = digitos.slice(2);
+
+  digitos = digitos.slice(0, 11);
+
+  if (!digitos) return '';
+  if (digitos.length <= 2) return '(' + digitos;
+
+  const ddd = '(' + digitos.slice(0, 2) + ') ';
+  const numero = digitos.slice(2);
+
+  if (numero[0] === '9') {
+    if (numero.length === 1) return ddd + numero;
+    if (numero.length <= 5) return ddd + numero[0] + ' ' + numero.slice(1);
+    return ddd + numero[0] + ' ' + numero.slice(1, 5) + '-' + numero.slice(5);
+  }
+
+  if (numero.length <= 4) return ddd + numero;
+  return ddd + numero.slice(0, 4) + '-' + numero.slice(4);
+}
+
+function apenasDigitos(valor) {
+  return String(valor ?? '').replace(/\D/g, '');
+}
+
+// Liga a mascara em um campo. Aplica tambem no que ja estiver preenchido, entao
+// serve para o telefone que vem da sessao ou de um cadastro carregado.
+function ligarMascaraTelefone(input) {
+  if (!input || input.dataset.mascara === 'telefone') return;
+  input.dataset.mascara = 'telefone';
+
+  input.setAttribute('inputmode', 'numeric');
+  input.setAttribute('autocomplete', 'tel');
+  input.maxLength = 16;
+
+  const digitosAte = fim => (input.value.slice(0, fim).match(/\d/g) || []).length;
+
+  // A mascara reescreve o campo inteiro a cada tecla, entao o cursor precisa ser
+  // recolocado contando digitos, e nao caracteres — senao editar o meio do numero
+  // joga o cursor para o fim.
+  const redesenhar = (bruto, digitosAntes) => {
+    input.value = mascaraTelefone(bruto);
+
+    let pos = 0;
+    let vistos = 0;
+    while (pos < input.value.length && vistos < digitosAntes) {
+      if (/\d/.test(input.value[pos])) vistos++;
+      pos++;
+    }
+
+    if (document.activeElement === input) input.setSelectionRange(pos, pos);
+  };
+
+  input.addEventListener('input', () =>
+    redesenhar(input.value, digitosAte(input.selectionStart ?? input.value.length)));
+
+  // Backspace parado logo depois de um separador apagaria so o separador, que a
+  // mascara redesenha em seguida — a tecla pareceria nao ter feito nada. Aqui ele
+  // come o digito que esta atras do separador, que e o que a pessoa quis apagar.
+  input.addEventListener('keydown', e => {
+    const cursor = input.selectionStart;
+
+    if (e.key !== 'Backspace' || cursor !== input.selectionEnd || cursor === 0) return;
+    if (/\d/.test(input.value[cursor - 1])) return;
+
+    e.preventDefault();
+
+    const antes = digitosAte(cursor);
+    const inicio = input.value.slice(0, cursor).replace(/\d(?=\D*$)/, '');
+    redesenhar(inicio + input.value.slice(cursor), antes - 1);
+  });
+
+  redesenhar(input.value, Infinity);
+}
+
+// Atalho para ligar varios campos de uma vez, ignorando os que nao existem na
+// pagina — cada tela tem um subconjunto dos ids.
+function ligarMascarasTelefone(...ids) {
+  ids.forEach(id => ligarMascaraTelefone(document.getElementById(id)));
 }
 
 function dataHoje() {
