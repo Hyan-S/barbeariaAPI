@@ -23,6 +23,16 @@ COPY --from=build /app .
 
 # O Render injeta PORT; o Program.cs le essa variavel.
 ENV ASPNETCORE_ENVIRONMENT=Production
+
+# Desliga o recarregamento automatico do appsettings.json. Por padrao o host abre
+# um FileSystemWatcher por arquivo de configuracao, e no Linux cada um gasta uma
+# instancia de inotify. O limite (fs.inotify.max_user_instances, 128) e por UID no
+# kernel do host, compartilhado com os outros containers que rodam como root na
+# mesma maquina do Render: quando ele esgota, o WebApplication.CreateBuilder estoura
+# IOException e a app nem chega a subir. Vigiar o arquivo aqui nao serve para nada —
+# a imagem e imutavel e a configuracao de verdade vem por variavel de ambiente.
+ENV DOTNET_hostBuilder__reloadConfigOnChange=false
+
 EXPOSE 10000
 
 ENTRYPOINT ["dotnet", "Barbearia.Api.dll"]
