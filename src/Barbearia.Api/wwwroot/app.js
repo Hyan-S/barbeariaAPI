@@ -639,3 +639,20 @@ addEventListener('DOMContentLoaded', () => {
 
 addEventListener('resize', medirTopo);
 addEventListener('orientationchange', medirTopo);
+
+// A roda do mouse muda o valor de <input type="number"> quando ele esta focado. E
+// perverso porque nao parece edicao: a pessoa rola a pagina com o cursor por cima do
+// campo e o numero anda calado, sem clique nenhum. Foi assim que o intervalo entre
+// horarios virou 38 num painel onde ninguem digitou 38 — e a agenda passou a oferecer
+// 09:00, 09:38, 10:16, com a conta certa em cima do valor errado.
+//
+// Sao 14 campos numericos no painel, e nos outros o estrago seria pior: preco do
+// servico, preco e estoque do produto. Tirar o foco na primeira rolagem resolve para
+// todos de uma vez, sem preventDefault, entao a pagina rola como a pessoa esperava.
+addEventListener('wheel', e => {
+  const alvo = e.target;
+
+  if (alvo instanceof HTMLInputElement && alvo.type === 'number'
+      && document.activeElement === alvo)
+    alvo.blur();
+}, { passive: true });

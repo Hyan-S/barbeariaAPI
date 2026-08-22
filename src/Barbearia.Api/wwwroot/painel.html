@@ -764,8 +764,9 @@
       <div class="linha">
         <div class="campo">
           <label for="cfgIntervalo">Intervalo entre horarios (min)</label>
-          <input id="cfgIntervalo" type="number" min="5" max="120">
-          <p class="ajuda">De quanto em quanto tempo um atendimento pode comecar.</p>
+          <input id="cfgIntervalo" type="number" min="5" max="120" step="5">
+          <p class="ajuda">De quanto em quanto tempo um atendimento pode comecar.
+            <br><span id="previaGrade" class="preco"></span></p>
         </div>
         <div class="campo">
           <label for="cfgAntecedencia">Antecedencia minima (min)</label>
@@ -986,7 +987,7 @@
 </main>
 </div>
 
-<script src="app.js?v=202608221353"></script>
+<script src="app.js?v=202608221444"></script>
 <script>
 const msg = document.getElementById('msg');
 let barbeiros = [];
@@ -1123,6 +1124,7 @@ function iniciar() {
 
   if (Auth.ehAdmin) {
     document.getElementById('salvarConfig').onclick = salvarConfig;
+    document.getElementById('cfgIntervalo').oninput = previaDaGrade;
     document.getElementById('testar').onclick = testarWhatsApp;
     document.getElementById('salvarUsuario').onclick = salvarUsuario;
     document.getElementById('cancelarEdicao').onclick = limparFormUsuario;
@@ -2420,6 +2422,25 @@ async function salvarBloqueio() {
     aviso(msg, 'Bloqueio criado.', 'ok');
   } catch (e) { aviso(msg, e.message); }
 }
+// Escreve a grade que o numero produz, em vez de deixar a pessoa descobrir na agenda.
+// 38 e um valor legal para o campo (esta entre 5 e 120) e nao parece errado escrito
+// assim; escrito como "09:00, 09:38, 10:16" nao passa batido.
+function previaDaGrade() {
+  const minutos = Number(document.getElementById('cfgIntervalo').value);
+  const alvo = document.getElementById('previaGrade');
+
+  if (!minutos || minutos < 5) { alvo.textContent = ''; return; }
+
+  const horas = [];
+  for (let i = 0; i < 4; i++) {
+    const total = 9 * 60 + i * minutos;
+    horas.push(String(Math.floor(total / 60)).padStart(2, '0')
+      + ':' + String(total % 60).padStart(2, '0'));
+  }
+
+  alvo.textContent = `Abrindo as 09:00, a agenda oferece ${horas.join(', ')}...`;
+}
+
 async function carregarConfig() {
   try { aplicarConfig(await api('/api/admin/config')); }
   catch (e) { aviso(msg, e.message); }
@@ -2447,6 +2468,8 @@ function aplicarConfig(c) {
 
   marcar('tagSecret', c['whatsapp.appSecretPreenchido']);
   marcar('tagToken', c['whatsapp.accessTokenPreenchido']);
+
+  previaDaGrade();
 
   const status = document.getElementById('statusWpp');
   status.textContent = c['whatsapp.pronto'] ? 'pronto' : 'incompleto';
