@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" id="metaTema" content="#f6f6f8">
 <title>Painel</title>
 <link rel="icon" href="favicon.svg?v=202608171445" type="image/svg+xml">
@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=202608171445">
 <script>document.documentElement.dataset.tema =
   localStorage.getItem('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro');</script>
-<link rel="stylesheet" href="app.css?v=202608201700">
+<link rel="stylesheet" href="app.css?v=202608211500">
 </head>
 <body>
 <header class="topo" id="topo"></header>
@@ -101,11 +101,28 @@
   </section>
 
   <section id="secao-dashboard" class="oculto">
-    <div class="card">
-      <h2>Dashboard</h2>
-      <p class="ajuda">Considera atendimentos nao cancelados. Valores usam o preco
-        congelado no momento do agendamento.</p>
 
+    <div class="faixa">
+      <h3>Caixa de hoje</h3>
+      <span id="dCaixaDia"></span>
+    </div>
+
+    <div class="tiles" id="dCaixaTiles"></div>
+
+    <div class="card">
+      <p class="grafico-titulo">Como o dinheiro entrou hoje</p>
+      <div class="resumo-agenda" id="dFormas"></div>
+      <div id="dFormasVazio" class="vazio oculto">Nenhum atendimento encerrado hoje.</div>
+      <p class="ajuda" style="margin-top:10px">Soma servico e produto de cada
+        atendimento encerrado hoje. Nao muda com o filtro de periodo abaixo.</p>
+    </div>
+
+    <div class="faixa">
+      <h3>Periodo</h3>
+      <span id="dPeriodoRotulo"></span>
+    </div>
+
+    <div class="card">
       <div class="periodos" id="dPeriodos"></div>
       <div class="linha" style="margin-bottom:4px">
         <div class="campo" style="margin:0">
@@ -120,21 +137,30 @@
           <button class="btn" id="dAplicar">Atualizar</button>
         </div>
       </div>
+      <p class="ajuda" style="margin-top:12px"><strong>Caixa</strong> conta o que foi
+        encerrado, na data em que foi encerrado. <strong>Previsto</strong> e a soma da
+        agenda, pelo preco congelado no momento do agendamento. Os dois so batem
+        quando todo atendimento do periodo foi encerrado.</p>
     </div>
 
     <div class="tiles" id="dTiles"></div>
 
     <div class="card">
-      <p class="grafico-titulo" id="dSerieTitulo">Receita por dia</p>
+      <p class="grafico-titulo" id="dSerieTitulo">Caixa por dia</p>
       <div class="gtempo" id="dSerie"></div>
+    </div>
+
+    <div class="faixa">
+      <h3>Analise</h3>
+      <span>Onde o movimento e o dinheiro se concentram</span>
     </div>
 
     <div class="duas">
       <div class="card">
-        <p class="grafico-titulo">Receita por profissional</p>
+        <p class="grafico-titulo">Caixa por profissional</p>
         <div class="barras" id="dBarbeiros"></div>
         <div class="rolagem" style="margin-top:16px"><table>
-          <thead><tr><th>Profissional</th><th>Atend.</th><th>Ticket</th><th>Ocupacao</th></tr></thead>
+          <thead><tr><th>Profissional</th><th>Atend.</th><th>Caixa</th><th>Ticket</th><th>Ocupacao</th></tr></thead>
           <tbody id="dBarbeirosTab"></tbody>
         </table></div>
         <p class="ajuda" style="margin-top:10px">Ocupacao = tempo atendido sobre o
@@ -145,7 +171,7 @@
         <p class="grafico-titulo">Servicos mais consumidos</p>
         <div class="barras" id="dServicos"></div>
         <div class="rolagem" style="margin-top:16px"><table>
-          <thead><tr><th>Servico</th><th>Qtd</th><th>Receita</th><th>Part.</th></tr></thead>
+          <thead><tr><th>Servico</th><th>Qtd</th><th>Previsto</th><th>Part.</th></tr></thead>
           <tbody id="dServicosTab"></tbody>
         </table></div>
       </div>
@@ -178,20 +204,22 @@
     </div>
 
     <div class="card">
-      <p class="grafico-titulo">Janelas fixas (terminando hoje)</p>
+      <p class="grafico-titulo">Produtos <span id="dProdTag" class="tag"></span></p>
       <div class="rolagem"><table>
-        <thead><tr><th>Periodo</th><th>Atendimentos</th><th>Receita</th><th>Media/dia</th></tr></thead>
-        <tbody id="dJanelas"></tbody>
+        <thead><tr><th>Produto</th><th>Vendidos</th><th>Faturado</th><th>Estoque</th><th>Valor parado</th></tr></thead>
+        <tbody id="dProdutos"></tbody>
       </table></div>
+      <p class="ajuda" id="dProdAviso" style="margin-top:10px"></p>
     </div>
 
     <div class="card">
-      <p class="grafico-titulo">Produtos <span id="dProdTag" class="tag"></span></p>
-      <div id="dProdAviso" class="aviso info"></div>
+      <p class="grafico-titulo">Janelas fixas (terminando hoje)</p>
       <div class="rolagem"><table>
-        <thead><tr><th>Produto</th><th>Estoque</th><th>Preco</th><th>Valor parado</th></tr></thead>
-        <tbody id="dProdutos"></tbody>
+        <thead><tr><th>Periodo</th><th>Atendimentos</th><th>Previsto</th><th>Media/dia</th></tr></thead>
+        <tbody id="dJanelas"></tbody>
       </table></div>
+      <p class="ajuda" style="margin-top:10px">Estas linhas usam o previsto da agenda,
+        nao o caixa: servem para comparar movimento, nao para conferir dinheiro.</p>
     </div>
   </section>
 
@@ -349,6 +377,44 @@
       <div id="agendaTruncada" class="aviso info oculto" style="margin-top:14px"></div>
     </div>
 
+    <div class="card oculto" id="cardFechar">
+      <h2>Encerrar atendimento</h2>
+      <p class="ajuda" id="subFechar"></p>
+      <input type="hidden" id="fecharId">
+
+      <div class="linha">
+        <div class="campo">
+          <label for="fValor">Valor cobrado do servico</label>
+          <input id="fValor" inputmode="decimal">
+          <p class="ajuda" id="fValorAjuda"></p>
+        </div>
+        <div class="campo">
+          <label for="fForma">Forma de pagamento</label>
+          <select id="fForma">
+            <option value="Dinheiro">Dinheiro</option>
+            <option value="Pix">Pix</option>
+            <option value="Debito">Debito</option>
+            <option value="Credito">Credito</option>
+            <option value="Outro">Outro</option>
+          </select>
+        </div>
+      </div>
+
+      <p class="grafico-titulo" style="margin-top:6px">Produtos que sairam</p>
+      <div id="fItens"></div>
+      <div id="fItensVazio" class="vazio">Nenhum produto neste atendimento.</div>
+
+      <div class="campo" style="margin-top:12px">
+        <label for="fAdicionar">Adicionar produto</label>
+        <select id="fAdicionar"><option value="">Escolha um produto</option></select>
+      </div>
+
+      <div class="resumo-agenda" id="fTotal" style="margin:16px 0"></div>
+
+      <button class="btn" id="fConfirmar">Encerrar e registrar</button>
+      <button class="btn neutro" id="fCancelar">Fechar</button>
+    </div>
+
     <div class="card oculto" id="cardReagendar">
       <h2 id="tituloReagendar">Reagendar</h2>
       <p class="ajuda" id="subReagendar"></p>
@@ -439,8 +505,9 @@
 
     <div class="card">
       <h2>Horarios cadastrados</h2>
+      <div id="semHorario" class="oculto"></div>
       <div class="rolagem"><table>
-        <thead><tr><th>Dia</th><th>Faixa</th><th></th></tr></thead>
+        <thead><tr><th>Profissional</th><th>Dia</th><th>Faixa</th><th></th></tr></thead>
         <tbody id="listaExpedientes"></tbody>
       </table></div>
     </div>
@@ -637,6 +704,7 @@
 
       <button class="btn" id="salvarCliente">Salvar</button>
       <button class="btn neutro" id="fecharCliente">Fechar</button>
+      <button class="btn perigo oculto" id="excluirCliente" type="button">Excluir cliente</button>
 
       <h2 style="margin-top:24px">Historico</h2>
       <div class="rolagem"><table>
@@ -918,7 +986,7 @@
 </main>
 </div>
 
-<script src="app.js?v=202608201700"></script>
+<script src="app.js?v=202608221353"></script>
 <script>
 const msg = document.getElementById('msg');
 let barbeiros = [];
@@ -1018,6 +1086,7 @@ function iniciar() {
     document.getElementById('buscaCliente').onkeydown = e => { if (e.key === 'Enter') carregarClientes(); };
     document.getElementById('salvarCliente').onclick = salvarCliente;
     document.getElementById('zerarAcesso').onclick = zerarAcessoCliente;
+    document.getElementById('excluirCliente').onclick = excluirCliente;
     document.getElementById('fecharCliente').onclick =
       () => document.getElementById('cardCliente').classList.add('oculto');
     carregarClientes();
@@ -1288,7 +1357,7 @@ async function carregarProdutos() {
       <td><span class="tag ${p.ativo ? 'ok' : 'erro'}">${p.ativo ? 'ativo' : 'inativo'}</span></td>
       <td>
         <button class="btn pequeno neutro" data-editar="${esc(p.id)}">Editar</button>
-        <button class="btn pequeno perigo" data-remover="${esc(p.id)}">Remover</button>
+        ${p.ativo ? '' : `<button class="btn pequeno perigo" data-excluir="${esc(p.id)}">Excluir</button>`}
       </td>
     </tr>`).join('');
 
@@ -1307,13 +1376,35 @@ async function carregarProdutos() {
     };
   });
 
-  corpo.querySelectorAll('[data-remover]').forEach(b => {
-    b.onclick = async () => {
-      if (!confirm('Remover este produto?')) return;
-      await api('/api/produtos/' + b.dataset.remover, { method: 'DELETE' });
-      carregarProdutos();
-    };
+  corpo.querySelectorAll('[data-excluir]').forEach(b => {
+    b.onclick = () => excluirProduto(b.dataset.excluir,
+      lista.find(x => x.id === b.dataset.excluir).nome);
   });
+}
+
+// Antes o botao aparecia em qualquer linha e o aviso era so "Remover este produto?".
+// Ele agora aparece so no produto inativo, e o servidor recusa o que ja foi vendido:
+// o item vendido guarda o preco daquele dia, e apagar o produto levaria a venda junto
+// (Cascade), mudando o caixa de um dia que ja fechou.
+async function excluirProduto(id, nome) {
+  if (!confirm(`Excluir o produto "${nome}"? Isso nao tem volta, e as avaliacoes que ele `
+    + 'recebeu na vitrine vao junto. Se ele ja foi vendido em algum atendimento, o sistema '
+    + 'recusa e ele fica inativo.')) return;
+
+  aviso(msg, '');
+  try {
+    const r = await api('/api/produtos/' + id, { method: 'DELETE' });
+    await carregarProdutos();
+
+    // Diz o que foi embora junto. Quem apaga um produto com 12 comentarios merece
+    // saber que os 12 sumiram agora, e nao descobrir na vitrine depois.
+    const junto = [
+      r?.avaliacoes ? `${r.avaliacoes} ${r.avaliacoes === 1 ? 'avaliacao' : 'avaliacoes'}` : null,
+      r?.pedidos ? `${r.pedidos} ${r.pedidos === 1 ? 'pedido em aberto' : 'pedidos em aberto'}` : null
+    ].filter(Boolean).join(' e ');
+
+    aviso(msg, 'Produto excluido.' + (junto ? ` Foram ${junto} junto.` : ''), 'ok');
+  } catch (e) { aviso(msg, e.message); }
 }
 
 // O que o cliente marcou na vitrine depois de agendar. Fica na coluna do servico
@@ -1547,6 +1638,11 @@ async function abrirCliente(id) {
 
   document.getElementById('zerarAcesso').classList.toggle('oculto', !c.temAcesso);
 
+  // O botao de excluir aparece so em quem esta bloqueado, e o bloqueio e o passo com
+  // volta: marca, salva, ve se ninguem sente falta, e ai apaga. Quem tem historico o
+  // servidor recusa — a ficha do cliente e o que faz a agenda antiga ainda ter sentido.
+  document.getElementById('excluirCliente').classList.toggle('oculto', !c.bloqueado);
+
   document.getElementById('cardCliente').classList.remove('oculto');
   document.getElementById('cardCliente').scrollIntoView({ behavior: 'smooth' });
 }
@@ -1565,6 +1661,23 @@ async function zerarAcessoCliente() {
     await abrirCliente(id);
     carregarClientes();
     aviso(msg, 'Acesso zerado. O cliente ja pode criar a senha de novo.', 'ok');
+  } catch (e) { aviso(msg, e.message); }
+}
+
+async function excluirCliente() {
+  const id = document.getElementById('clienteId').value;
+  const nome = document.getElementById('tituloCliente').textContent;
+
+  if (!confirm(`Excluir o cliente "${nome}"? Isso nao tem volta: o telefone volta a estar `
+    + 'livre para outro cadastro. Se ele tem agendamento, mesmo cancelado, o sistema recusa '
+    + 'e ele continua bloqueado.')) return;
+
+  aviso(msg, '');
+  try {
+    await api('/api/clientes/' + id, { method: 'DELETE' });
+    document.getElementById('cardCliente').classList.add('oculto');
+    await carregarClientes();
+    aviso(msg, 'Cliente excluido.', 'ok');
   } catch (e) { aviso(msg, e.message); }
 }
 
@@ -1799,7 +1912,8 @@ async function carregarAgenda() {
     <div><span class="rot">Concluidos</span><span class="val">${r.resumo.concluidos}</span></div>
     <div><span class="rot">Cancelados</span><span class="val">${r.resumo.cancelados}</span></div>
     <div><span class="rot">Tempo</span><span class="val">${horas(r.resumo.minutos)}</span></div>
-    <div><span class="rot">Previsto</span><span class="val">${moeda(r.resumo.receitaCentavos)}</span></div>`;
+    <div><span class="rot">Previsto</span><span class="val">${moeda(r.resumo.receitaCentavos)}</span></div>
+    <div><span class="rot">Caixa</span><span class="val">${moeda(r.resumo.caixaCentavos)}</span></div>`;
 
   // Ordem pensada para o balcao: hora, quem, o que e quanto vem primeiro.
   // Duracao, origem e barbeiro seguem visiveis, mas em segundo plano.
@@ -1814,7 +1928,9 @@ async function carregarAgenda() {
       <td>${esc(a.barbeiro)}</td>
       <td><span class="tag ${a.status === 'Cancelado' ? 'erro' : 'ok'}">${esc(a.status)}</span>
           <br><span class="preco">${esc(a.origem)}</span></td>
-      <td>${a.status === 'Cancelado' ? '' : `
+      <td>${a.status === 'Cancelado' ? '' : a.fechado
+        ? `<span class="tag ok">${moeda(a.valorCobradoCentavos)} · ${esc(a.forma || '')}</span>`
+        : `${jaComecou(a.inicio) ? `<button class="btn pequeno" data-fechar="${esc(a.id)}">Encerrar</button>` : ''}
         <button class="btn pequeno neutro" data-mover="${esc(a.id)}"
           data-info="${esc((a.cliente || a.telefone) + ' — ' + a.servico)}">Reagendar</button>
         <button class="btn pequeno perigo" data-cancelar="${esc(a.id)}">Cancelar</button>`}</td>
@@ -1831,6 +1947,189 @@ async function carregarAgenda() {
   corpo.querySelectorAll('[data-mover]').forEach(b => {
     b.onclick = () => abrirReagendar(b.dataset.mover, b.dataset.info);
   });
+
+  // O item inteiro vai para o modal por um mapa, e nao por data-atributo: produtos
+  // e uma lista, e serializar isso dentro de um atributo HTML so criaria chance de
+  // erro de escape.
+  const porId = new Map(r.itens.map(a => [a.id, a]));
+
+  corpo.querySelectorAll('[data-fechar]').forEach(b => {
+    b.onclick = () => abrirFechar(porId.get(b.dataset.fechar));
+  });
+}
+
+// Encerrar so aparece depois que o atendimento comecou: o servidor recusa antes
+// disso, e mostrar um botao que vai dar erro nao ajuda ninguem.
+function jaComecou(inicioLocal) {
+  return new Date(inicioLocal) <= new Date();
+}
+
+// ---------- Encerramento do atendimento ----------
+
+let fechItens = [];
+let catalogoProdutos = null;
+
+// Aceita "45", "45,50" e "45.50". Devolve null quando nao da para ler numero.
+function centavosDe(texto) {
+  const limpo = String(texto ?? '').replace(/[^\d,.-]/g, '').replace(',', '.');
+  const n = Number.parseFloat(limpo);
+  return Number.isFinite(n) ? Math.round(n * 100) : null;
+}
+
+function reaisDe(centavos) {
+  return ((centavos || 0) / 100).toFixed(2).replace('.', ',');
+}
+
+async function abrirFechar(a) {
+  if (!a) return;
+
+  // O que o cliente marcou na vitrine ja vem selecionado quando era "quero levar";
+  // "usar no corte" entra na lista desmarcado, porque nem sempre virou venda.
+  fechItens = (a.produtos || []).map(p => ({
+    produtoId: p.produtoId,
+    nome: p.produto,
+    precoCentavos: p.precoCentavos,
+    quantidade: p.quantidade > 0 ? p.quantidade : 1,
+    marcado: p.vendido || p.tipo === 'Comprar'
+  }));
+
+  document.getElementById('fecharId').value = a.id;
+  document.getElementById('subFechar').textContent =
+    `${a.cliente || a.telefone} — ${a.servico} com ${a.barbeiro}, ${soHora(a.inicio)} de ${soDia(a.inicio)}`;
+
+  const valor = document.getElementById('fValor');
+  valor.value = reaisDe(a.precoCentavos);
+  valor.oninput = totalFechar;
+
+  document.getElementById('fValorAjuda').textContent =
+    `Combinado no agendamento: ${moeda(a.precoCentavos)}. Mude o valor se houve desconto.`;
+
+  document.getElementById('fForma').value = 'Dinheiro';
+  document.getElementById('fConfirmar').onclick = confirmarFechar;
+  document.getElementById('fConfirmar').disabled = false;
+  document.getElementById('fCancelar').onclick = () =>
+    document.getElementById('cardFechar').classList.add('oculto');
+
+  desenharItensFechar();
+
+  const cartao = document.getElementById('cardFechar');
+  cartao.classList.remove('oculto');
+  cartao.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+  // O catalogo vem da vitrine, que e rota publica: assim o barbeiro lanca produto
+  // mesmo sem ter a permissao de gerenciar produtos.
+  if (!catalogoProdutos) {
+    try { catalogoProdutos = await api('/api/vitrine/produtos'); }
+    catch { catalogoProdutos = []; }
+  }
+
+  const sel = document.getElementById('fAdicionar');
+  sel.innerHTML = '<option value="">Escolha um produto</option>' +
+    catalogoProdutos.map(p =>
+      `<option value="${esc(p.id)}">${esc(p.nome)} — ${moeda(p.precoCentavos)}</option>`).join('');
+
+  sel.value = '';
+  sel.onchange = () => {
+    const escolhido = catalogoProdutos.find(x => x.id === sel.value);
+    sel.value = '';
+    if (!escolhido) return;
+
+    const existente = fechItens.find(i => i.produtoId === escolhido.id);
+    if (existente) { existente.marcado = true; existente.quantidade++; }
+    else fechItens.push({
+      produtoId: escolhido.id, nome: escolhido.nome,
+      precoCentavos: escolhido.precoCentavos, quantidade: 1, marcado: true
+    });
+
+    desenharItensFechar();
+  };
+}
+
+function desenharItensFechar() {
+  const caixa = document.getElementById('fItens');
+  document.getElementById('fItensVazio').classList.toggle('oculto', fechItens.length > 0);
+
+  caixa.innerHTML = fechItens.map((i, idx) => `
+    <div class="item-venda">
+      <input type="checkbox" data-marcar="${idx}" ${i.marcado ? 'checked' : ''}
+        aria-label="Vendeu ${esc(i.nome)}">
+      <span class="nome">${esc(i.nome)}<br><span class="preco">${moeda(i.precoCentavos)} cada</span></span>
+      <input type="number" min="1" max="99" value="${i.quantidade}" data-qtd="${idx}"
+        aria-label="Quantidade de ${esc(i.nome)}">
+      <button class="btn pequeno neutro" type="button" data-tirar="${idx}">Tirar</button>
+    </div>`).join('');
+
+  caixa.querySelectorAll('[data-marcar]').forEach(el => el.onchange = () => {
+    fechItens[+el.dataset.marcar].marcado = el.checked;
+    totalFechar();
+  });
+
+  caixa.querySelectorAll('[data-qtd]').forEach(el => el.oninput = () => {
+    const n = Math.min(99, Math.max(1, parseInt(el.value, 10) || 1));
+    fechItens[+el.dataset.qtd].quantidade = n;
+    totalFechar();
+  });
+
+  caixa.querySelectorAll('[data-tirar]').forEach(el => el.onclick = () => {
+    fechItens.splice(+el.dataset.tirar, 1);
+    desenharItensFechar();
+  });
+
+  totalFechar();
+}
+
+function totalFechar() {
+  const servico = centavosDe(document.getElementById('fValor').value) ?? 0;
+  const produtos = fechItens
+    .filter(i => i.marcado)
+    .reduce((soma, i) => soma + i.precoCentavos * i.quantidade, 0);
+
+  document.getElementById('fTotal').innerHTML = `
+    <div><span class="rot">Servico</span><span class="val">${moeda(servico)}</span></div>
+    <div><span class="rot">Produtos</span><span class="val">${moeda(produtos)}</span></div>
+    <div><span class="rot">Total</span><span class="val">${moeda(servico + produtos)}</span></div>`;
+}
+
+async function confirmarFechar() {
+  const botao = document.getElementById('fConfirmar');
+  const valor = centavosDe(document.getElementById('fValor').value);
+
+  if (valor === null || valor < 0) {
+    aviso(msg, 'Informe quanto foi cobrado pelo servico.');
+    return;
+  }
+
+  aviso(msg, '');
+  botao.disabled = true;
+
+  try {
+    const r = await api(
+      `/api/gestor/agendamentos/${document.getElementById('fecharId').value}/fechar`, {
+        method: 'POST',
+        body: JSON.stringify({
+          valorCobradoCentavos: valor,
+          formaPagamento: document.getElementById('fForma').value,
+          produtos: fechItens
+            .filter(i => i.marcado)
+            .map(i => ({ produtoId: i.produtoId, quantidade: i.quantidade }))
+        })
+      });
+
+    document.getElementById('cardFechar').classList.add('oculto');
+
+    aviso(msg, `Encerrado: ${moeda(r.totalCentavos)} em ${r.forma}.`
+      + (r.descontoCentavos > 0 ? ` Desconto de ${moeda(r.descontoCentavos)}.` : ''), 'ok');
+
+    carregarAgenda();
+
+    // O caixa de hoje mudou. Se o dashboard nunca foi aberto, os campos de data
+    // estao vazios e carregarDashboard sai na primeira linha, sem chamar nada.
+    if (Auth.permite('dashboard')) carregarDashboard();
+  } catch (e) {
+    aviso(msg, e.message);
+  } finally {
+    botao.disabled = false;
+  }
 }
 
 function horas(min) {
@@ -1931,12 +2230,15 @@ async function carregarServicos() {
       <td>${s.duracaoMinutos} min</td>
       <td>${moeda(s.precoCentavos)}</td>
       <td><span class="tag ${s.ativo ? 'ok' : 'erro'}">${s.ativo ? 'ativo' : 'inativo'}</span></td>
-      <td><button class="btn pequeno neutro" data-id="${s.id}">Editar</button></td>
+      <td>
+        <button class="btn pequeno neutro" data-editar="${s.id}">Editar</button>
+        ${s.ativo ? '' : `<button class="btn pequeno perigo" data-excluir="${s.id}">Excluir</button>`}
+      </td>
     </tr>`).join('');
 
-  corpo.querySelectorAll('button').forEach(b => {
+  corpo.querySelectorAll('[data-editar]').forEach(b => {
     b.onclick = () => {
-      const s = lista.find(x => x.id === b.dataset.id);
+      const s = lista.find(x => x.id === b.dataset.editar);
       document.getElementById('servicoId').value = s.id;
       document.getElementById('sNome').value = s.nome;
       document.getElementById('sDuracao').value = s.duracaoMinutos;
@@ -1948,6 +2250,27 @@ async function carregarServicos() {
       window.scrollTo(0, 0);
     };
   });
+
+  corpo.querySelectorAll('[data-excluir]').forEach(b => {
+    b.onclick = () => excluirServico(b.dataset.excluir,
+      lista.find(x => x.id === b.dataset.excluir).nome);
+  });
+}
+
+// O botao Excluir so existe na linha do servico inativo — quem decide de verdade e
+// o servidor, que recusa o ativo e recusa o que tem agendamento apontando para ele.
+// Aparecer so no inativo poupa o clique que ja se sabe que vai dar errado, e mostra
+// na tela qual e a ordem: desativa, ve se ninguem reclama, exclui.
+async function excluirServico(id, nome) {
+  if (!confirm(`Excluir o servico "${nome}"? Isso nao tem volta. `
+    + 'Se algum agendamento antigo usa este servico, o sistema recusa e ele fica inativo.')) return;
+
+  aviso(msg, '');
+  try {
+    await api('/api/gestor/servicos/' + id, { method: 'DELETE' });
+    await carregarServicos();
+    aviso(msg, 'Servico excluido.', 'ok');
+  } catch (e) { aviso(msg, e.message); }
 }
 
 function limparServico() {
@@ -1982,15 +2305,18 @@ async function salvarServico() {
   } catch (e) { aviso(msg, e.message); }
 }
 async function carregarExpedientes() {
-  const lista = await api('/api/gestor/expedientes');
+  const d = await api('/api/gestor/expedientes');
   const corpo = document.getElementById('listaExpedientes');
 
-  corpo.innerHTML = lista.map(e => `
-    <tr>
-      <td>${DIAS[e.diaSemana]}</td>
-      <td>${e.horaInicio} - ${e.horaFim}</td>
-      <td><button class="btn pequeno perigo" data-id="${e.id}">Remover</button></td>
-    </tr>`).join('');
+  corpo.innerHTML = d.expedientes.length
+    ? d.expedientes.map(e => `
+        <tr>
+          <td>${esc(e.barbeiro)}</td>
+          <td>${DIAS[e.diaSemana]}</td>
+          <td>${e.horaInicio} - ${e.horaFim}</td>
+          <td><button class="btn pequeno perigo" data-id="${e.id}">Remover</button></td>
+        </tr>`).join('')
+    : '<tr><td colspan="4" class="vazio">Nenhum horario cadastrado ainda.</td></tr>';
 
   corpo.querySelectorAll('button').forEach(b => {
     b.onclick = async () => {
@@ -1998,6 +2324,47 @@ async function carregarExpedientes() {
       carregarExpedientes();
     };
   });
+
+  // Quem atende e nao tem faixa nenhuma simplesmente nao aparece para o cliente
+  // marcar, e antes nada dizia isso em lugar nenhum. Este aviso e o conserto do que
+  // o dono relatou: cadastrou o profissional, marcou ele no servico, e a tela de
+  // horarios continuou vazia sem explicacao.
+  const caixa = document.getElementById('semHorario');
+  caixa.classList.toggle('oculto', d.semHorario.length === 0);
+
+  if (d.semHorario.length) {
+    caixa.className = 'aviso erro';
+    caixa.innerHTML =
+      `<b>${d.semHorario.length === 1 ? 'Este profissional atende mas nao tem horario' : 'Estes profissionais atendem mas nao tem horario'}, `
+      + 'entao nenhum cliente consegue marcar com ' + (d.semHorario.length === 1 ? 'ele' : 'eles') + '.</b><br>'
+      + d.semHorario.map(b => `<span style="display:inline-flex;align-items:center;gap:8px;margin-top:8px">
+          ${esc(b.nome)}
+          ${d.temModelo
+            ? `<button class="btn pequeno neutro" data-copiar="${esc(b.id)}">Copiar funcionamento da barbearia</button>`
+            : '<span class="preco">cadastre as faixas dele acima</span>'}
+        </span>`).join('<br>');
+
+    caixa.querySelectorAll('[data-copiar]').forEach(b => {
+      b.onclick = () => copiarFuncionamento(b.dataset.copiar);
+    });
+  }
+}
+
+// Herdar o funcionamento acontece sozinho no cadastro. Este botao e para quem ja
+// estava cadastrado antes disso existir — em vez de digitar as faixas de novo, uma a
+// uma, copia a grade que a barbearia pratica.
+async function copiarFuncionamento(barbeiroId) {
+  aviso(msg, '');
+  try {
+    const r = await api('/api/gestor/expedientes/copiar', {
+      method: 'POST',
+      body: JSON.stringify({ barbeiroId })
+    });
+
+    await carregarExpedientes();
+    aviso(msg, `Funcionamento copiado: ${r.criados} ${r.criados === 1 ? 'faixa' : 'faixas'}. `
+      + 'Ele ja aparece para os clientes marcarem.', 'ok');
+  } catch (e) { aviso(msg, e.message); }
 }
 
 async function salvarExpediente() {
@@ -2165,13 +2532,38 @@ async function carregarUsuarios() {
       <td><span class="tag">${esc(u.perfil)}</span></td>
       <td>${u.perfil === 'Admin' ? '<span class="preco">tudo</span>' : (esc(perms.join(', ')) || '<span class="preco">nenhuma</span>')}</td>
       <td><span class="tag ${u.ativo ? 'ok' : 'erro'}">${u.ativo ? 'ativo' : 'inativo'}</span></td>
-      <td><button class="btn pequeno neutro" data-id="${esc(u.id)}">Editar</button></td>
+      <td>
+        <button class="btn pequeno neutro" data-editar="${esc(u.id)}">Editar</button>
+        ${u.ativo ? '' : `<button class="btn pequeno perigo" data-excluir="${esc(u.id)}">Excluir</button>`}
+      </td>
     </tr>`;
   }).join('');
 
-  corpo.querySelectorAll('button').forEach(b => {
-    b.onclick = () => editarUsuario(lista.find(u => u.id === b.dataset.id));
+  corpo.querySelectorAll('[data-editar]').forEach(b => {
+    b.onclick = () => editarUsuario(lista.find(u => u.id === b.dataset.editar));
   });
+
+  corpo.querySelectorAll('[data-excluir]').forEach(b => {
+    b.onclick = () => excluirUsuario(b.dataset.excluir,
+      lista.find(u => u.id === b.dataset.excluir).nome);
+  });
+}
+
+// Desativar ja resolve o acesso: o funcionario cai da sessao na hora e nao aparece
+// mais para marcar. Excluir e o passo seguinte, para tirar da lista quem nunca
+// atendeu — o cadastro criado errado, o teste, quem desistiu antes de comecar. Quem
+// tem agenda no nome, ou fechou caixa, o servidor recusa e explica.
+async function excluirUsuario(id, nome) {
+  if (!confirm(`Excluir o funcionario "${nome}"? Isso nao tem volta. Os horarios de `
+    + 'trabalho e os bloqueios dele vao junto. Se ele tem agendamento no historico, o '
+    + 'sistema recusa e ele fica inativo.')) return;
+
+  aviso(msg, '');
+  try {
+    await api('/api/admin/usuarios/' + id, { method: 'DELETE' });
+    await carregarUsuarios();
+    aviso(msg, 'Funcionario excluido.', 'ok');
+  } catch (e) { aviso(msg, e.message); }
 }
 
 function editarUsuario(u) {
@@ -2218,8 +2610,12 @@ async function salvarUsuario() {
   aviso(msg, '');
   const id = document.getElementById('usuarioId').value;
 
+  // Lido antes do limparFormUsuario, que desmarca a caixa: quem atende recebe o
+  // funcionamento da barbearia no cadastro, e a mensagem do fim depende disso.
+  const atende = document.getElementById('uAtende').checked;
+
   try {
-    await api(id ? `/api/admin/usuarios/${id}` : '/api/admin/usuarios', {
+    const r = await api(id ? `/api/admin/usuarios/${id}` : '/api/admin/usuarios', {
       method: id ? 'PUT' : 'POST',
       body: JSON.stringify({
         nome: document.getElementById('uNome').value,
@@ -2238,7 +2634,21 @@ async function salvarUsuario() {
 
     limparFormUsuario();
     await carregarUsuarios();
-    aviso(msg, 'Usuario salvo.', 'ok');
+
+    if (id) { aviso(msg, 'Usuario salvo.', 'ok'); return; }
+
+    // No cadastro novo a mensagem diz em que horario a pessoa nasceu trabalhando. Sem
+    // esse recado ninguem sabia que ainda faltava um passo, e era exatamente ai que o
+    // profissional novo ficava invisivel para o cliente.
+    if (!atende)
+      aviso(msg, 'Funcionario cadastrado. Ele nao atende, entao nao entra na agenda.', 'ok');
+    else if (r?.horarios)
+      aviso(msg, `Funcionario cadastrado com ${r.horarios} ${r.horarios === 1 ? 'faixa' : 'faixas'} `
+        + 'de horario, copiadas do funcionamento da barbearia. Ele ja aparece para os clientes marcarem.', 'ok');
+    else
+      aviso(msg, 'Funcionario cadastrado, mas sem horario nenhum: nenhum profissional ativo tem '
+        + 'funcionamento cadastrado para servir de modelo. Cadastre as faixas dele em Funcionamento, '
+        + 'senao ele nao aparece para marcar.');
   } catch (e) { aviso(msg, e.message); }
 }
 
@@ -2344,7 +2754,7 @@ function serieTempo(el, pontos) {
   el.onmouseleave = null;
 
   if (!pontos.length || pontos.every(p => p.receitaCentavos === 0)) {
-    el.innerHTML = '<div class="vazio">Sem receita no periodo.</div>';
+    el.innerHTML = '<div class="vazio">Nenhum atendimento encerrado no periodo.</div>';
     return;
   }
 
@@ -2413,40 +2823,91 @@ async function carregarDashboard() {
   const ate = document.getElementById('dAte').value;
   if (!de || !ate) return;
 
-  const [d, janelas, prod] = await Promise.all([
+  const [d, caixa, janelas, prod] = await Promise.all([
     api(`/api/dashboard?de=${de}&ate=${ate}`),
+    api('/api/dashboard/caixa'),
     api('/api/dashboard/janelas'),
-    api('/api/dashboard/produtos')
+    api(`/api/dashboard/produtos?de=${de}&ate=${ate}`)
   ]);
 
-  const r = d.resumo, m = d.medias;
+  // ---------- Faixa 1: caixa de hoje ----------
+
+  const c = caixa.caixa;
+
+  document.getElementById('dCaixaDia').textContent =
+    `${caixa.diaSemana}, ${dataCurta(caixa.dia)}`;
+
+  // A comparacao usa so o servico, porque produto passou a ser contado agora e nao
+  // existe nas semanas anteriores — somar os dois faria hoje parecer melhor do que
+  // foi.
+  const media = caixa.comparacao.mediaCentavos;
+  const delta = media > 0 ? Math.round((c.servicoCentavos - media) * 100 / media) : null;
+
+  document.getElementById('dCaixaTiles').innerHTML =
+    tile('Entrou hoje', moeda(c.totalCentavos),
+         `${c.atendimentos} encerrados`, 'destaque') +
+    tile('Ticket medio', moeda(c.ticketMedioCentavos),
+         c.produtoCentavos > 0 ? `inclui ${moeda(c.produtoCentavos)} de produto` : 'so servico') +
+    tile('A receber hoje', moeda(caixa.aReceberCentavos),
+         `${caixa.aReceberQuantidade} ainda na agenda`) +
+    tile('Sem encerrar', caixa.semFechamentoQuantidade,
+         `${moeda(caixa.semFechamentoCentavos)} previsto`,
+         caixa.semFechamentoQuantidade > 0 ? 'alerta' : '') +
+    tile(`Media de ${caixa.diaSemana.toLowerCase()}`, moeda(media),
+         delta === null
+           ? 'sem historico ainda'
+           : `hoje ${delta >= 0 ? '+' : ''}${delta}% no servico`);
+
+  document.getElementById('dFormasVazio').classList.toggle('oculto', c.porForma.length > 0);
+  document.getElementById('dFormas').innerHTML = c.porForma.map(fp => `
+    <div><span class="rot">${esc(fp.forma)} (${fp.quantidade}x)</span>
+      <span class="val">${moeda(fp.centavos)}</span></div>`).join('');
+
+  // ---------- Faixa 2: periodo ----------
+
+  const r = d.resumo, m = d.medias, k = d.caixa, ab = d.aberto;
+
+  document.getElementById('dPeriodoRotulo').textContent =
+    `${dataCurta(d.periodo.de)} a ${dataCurta(d.periodo.ate)} · ${d.periodo.diasAbertos} dias abertos`;
 
   document.getElementById('dTiles').innerHTML =
-    tile('Receita', moeda(r.receitaCentavos),
-         r.receitaAgendadaCentavos > 0
-           ? `${moeda(r.receitaRealizadaCentavos)} realizado + ${moeda(r.receitaAgendadaCentavos)} agendado`
-           : `${d.periodo.diasAbertos} dias abertos`, 'destaque') +
-    tile('Atendimentos', r.atendimentos,
-         r.atendimentosAgendados > 0
-           ? `${r.atendimentosRealizados} feitos / ${r.atendimentosAgendados} na agenda`
-           : `${m.atendimentosPorDiaAberto} por dia aberto`) +
-    tile('Ticket medio', moeda(r.ticketMedioCentavos), `${r.horasAtendidas}h atendidas`) +
-    tile('Media diaria', moeda(m.porDiaAberto), `semana ${moeda(m.porSemana)}`) +
-    tile('Clientes', r.clientesUnicos, `${r.clientesNovos} novos / ${r.clientesRecorrentes} recorrentes`) +
+    tile('Caixa do periodo', moeda(k.totalCentavos),
+         k.descontoCentavos > 0
+           ? `${k.atendimentos} encerrados · ${moeda(k.descontoCentavos)} de desconto`
+           : `${k.atendimentos} encerrados`, 'destaque') +
+    tile('Ticket medio real', moeda(k.ticketMedioCentavos),
+         `previsto ${moeda(r.ticketMedioCentavos)}`) +
+    tile('Previsto na agenda', moeda(r.receitaCentavos),
+         `${r.atendimentos} atendimentos`) +
+    tile('A receber', moeda(ab.aReceberCentavos),
+         `${ab.aReceberQuantidade} na agenda`) +
+    tile('Sem encerrar', ab.semFechamentoQuantidade,
+         `${moeda(ab.semFechamentoCentavos)} previsto`,
+         ab.semFechamentoQuantidade > 0 ? 'alerta' : '') +
+    tile('Media diaria', moeda(k.mediaPorDiaAberto), `por dia aberto`) +
+    tile('Clientes', r.clientesUnicos,
+         `${r.clientesNovos} novos / ${r.clientesRecorrentes} recorrentes`) +
     tile('Cancelamento', r.taxaCancelamentoPct + '%', `${r.cancelados} cancelados`,
          r.taxaCancelamentoPct >= 15 ? 'alerta' : '');
 
   document.getElementById('dSerieTitulo').textContent =
-    `Receita por dia — ${dataCurta(d.periodo.de)} a ${dataCurta(d.periodo.ate)}`;
-  serieTempo(document.getElementById('dSerie'), d.serie);
+    `Caixa por dia — ${dataCurta(d.periodo.de)} a ${dataCurta(d.periodo.ate)}`;
+
+  // O grafico mostra caixa, nao previsto: serieTempo desenha receitaCentavos, entao
+  // o valor do dia entra nesse campo.
+  serieTempo(document.getElementById('dSerie'),
+    d.serie.map(x => ({ data: x.data, receitaCentavos: x.caixaCentavos })));
+
+  // ---------- Faixa 3: analise ----------
 
   barrasH(document.getElementById('dBarbeiros'),
-    d.porBarbeiro.map(b => ({ nome: b.nome, valor: b.receitaCentavos })), moeda);
+    d.porBarbeiro.map(b => ({ nome: b.nome, valor: b.caixaCentavos })), moeda);
 
   document.getElementById('dBarbeirosTab').innerHTML = d.porBarbeiro.length
     ? d.porBarbeiro.map(b => `<tr><td>${esc(b.nome)}</td><td>${b.atendimentos}</td>
+        <td>${moeda(b.caixaCentavos)}</td>
         <td>${moeda(b.ticketMedioCentavos)}</td><td>${b.ocupacaoPct}%</td></tr>`).join('')
-    : '<tr><td colspan="4" class="vazio">Sem atendimentos.</td></tr>';
+    : '<tr><td colspan="5" class="vazio">Sem atendimentos.</td></tr>';
 
   barrasH(document.getElementById('dServicos'),
     d.porServico.map(s => ({ nome: s.nome, valor: s.quantidade })), v => v + 'x');
@@ -2469,29 +2930,32 @@ async function carregarDashboard() {
     </div>`).join('');
 
   document.getElementById('dClientes').innerHTML = d.topClientes.length
-    ? d.topClientes.map(c => `<tr><td>${esc(c.nome)}<br><span class="preco">${esc(c.telefone)}</span></td>
-        <td>${c.atendimentos}</td><td>${moeda(c.receitaCentavos)}</td></tr>`).join('')
+    ? d.topClientes.map(cl => `<tr><td>${esc(cl.nome)}<br><span class="preco">${esc(cl.telefone)}</span></td>
+        <td>${cl.atendimentos}</td><td>${moeda(cl.receitaCentavos)}</td></tr>`).join('')
     : '<tr><td colspan="3" class="vazio">Sem clientes no periodo.</td></tr>';
 
   barrasH(document.getElementById('dOrigem'),
     d.porOrigem.map(o => ({ nome: o.origem === 'Web' ? 'Site' : o.origem, valor: o.quantidade })),
     v => v + 'x');
 
+  document.getElementById('dProdTag').textContent =
+    `${prod.unidadesVendidas} vendidos · ${moeda(prod.vendidoCentavos)}`;
+
+  document.getElementById('dProdAviso').textContent =
+    `Venda contada pelo encerramento do atendimento, com o preco congelado na hora. `
+    + `${prod.ativos} produtos ativos de ${prod.total}, ${prod.semEstoque} sem estoque, `
+    + `${moeda(prod.valorEmEstoqueCentavos)} parados em prateleira.`;
+
+  document.getElementById('dProdutos').innerHTML = prod.itens.length
+    ? prod.itens.map(x => `<tr>
+        <td>${esc(x.nome)}${x.ativo ? '' : ' <span class="tag erro">inativo</span>'}</td>
+        <td>${x.unidadesVendidas}</td><td>${moeda(x.vendidoCentavos)}</td>
+        <td>${x.estoque}</td><td>${moeda(x.valorEstoqueCentavos)}</td></tr>`).join('')
+    : '<tr><td colspan="5" class="vazio">Nenhum produto cadastrado.</td></tr>';
+
   document.getElementById('dJanelas').innerHTML = janelas.map(j =>
     `<tr><td>${j.rotulo}</td><td>${j.atendimentos}</td><td>${moeda(j.receitaCentavos)}</td>
      <td>${moeda(j.mediaDiariaCentavos)}</td></tr>`).join('');
-
-  document.getElementById('dProdTag').textContent = `${prod.ativos} ativos de ${prod.total}`;
-  document.getElementById('dProdAviso').textContent =
-    'O sistema nao registra venda de produto, so catalogo e estoque. Faturamento de produto '
-    + 'exige um cadastro de vendas, que ainda nao existe. Valor parado em estoque: '
-    + moeda(prod.valorEmEstoqueCentavos) + '.';
-
-  document.getElementById('dProdutos').innerHTML = prod.itens.length
-    ? prod.itens.map(p => `<tr><td>${esc(p.nome)}${p.ativo ? '' : ' <span class="tag erro">inativo</span>'}</td>
-        <td>${p.estoque}</td><td>${moeda(p.precoCentavos)}</td>
-        <td>${moeda(p.valorEstoqueCentavos)}</td></tr>`).join('')
-    : '<tr><td colspan="4" class="vazio">Nenhum produto cadastrado.</td></tr>';
 }
 
 // Ultima linha do arquivo de proposito. Rodando no meio, iniciar() esbarrava em

@@ -163,7 +163,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.Observacao).HasMaxLength(500);
             e.Property(x => x.Status).HasConversion<int>();
             e.Property(x => x.Origem).HasConversion<int>();
+            e.Property(x => x.FormaPagamento).HasConversion<int>();
             e.Ignore(x => x.EstaAtivo);
+            e.Ignore(x => x.EstaFechado);
+
+            // O caixa do dia e a consulta mais repetida do painel: tudo que foi
+            // fechado numa data. Sem indice ela varreria a tabela inteira.
+            e.HasIndex(x => x.FechadoEmUtc);
 
             e.HasOne(x => x.Barbeiro)
                 .WithMany(x => x.Agendamentos)

@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Barbearia.Api.Seguranca;
 using Barbearia.Application.Acesso;
 using Barbearia.Application.Configuracao;
@@ -192,9 +193,20 @@ public static class AdminEndpoints
                 return Results.BadRequest(new { erro = "Informe o nome" });
 
             db.Barbeiros.Add(usuario);
+
+            // Nasce trabalhando no horario da barbearia. Sem isto o funcionario novo
+            // ficava com zero expediente, e zero expediente significa nenhum horario na
+            // tela do cliente — mesmo depois de ser marcado no servico. Quem nao atende
+            // (recepcao, caixa) nao recebe faixa nenhuma, que e o certo: ele nao entra na
+            // agenda. O numero volta na resposta para o painel poder avisar quando a
+            // barbearia ainda nao tem funcionamento de quem copiar.
+            var horarios = usuario.Atende
+                ? await FuncionamentoDaBarbearia.AplicarAsync(db, usuario.Id)
+                : 0;
+
             await db.SaveChangesAsync();
 
-            return Results.Ok(new { usuario.Id });
+            return Results.Ok(new { usuario.Id, horarios });
         });
 
         g.MapPut("/usuarios/{id:guid}", async (
@@ -257,6 +269,60 @@ public static class AdminEndpoints
                 GuardaDeSessao.CortarSessoes(usuario, cache);
 
             await db.SaveChangesAsync();
+            return Results.Ok();
+        });
+
+        // Tira o funcionario do banco de vez. Desativar ja corta o acesso na hora (e o
+        // GuardaDeSessao que faz isso); excluir e para quando o cadastro nao deve nem
+        // aparecer mais na lista. As travas e o porque delas estao em RegraDeExclusao.
+        g.MapDelete("/usuarios/{id:guid}", async (
+            Guid id, ClaimsPrincipal quem, AppDbContext db, IMemoryCache cache) =>
+        {
+            var usuario = await db.Barbeiros.AsNoTracking()
+                .Where(x => x.Id == id)
+                .Select(x => new { x.Ativo })
+                .FirstOrDefaultAsync();
+
+            if (usuario is null) return Results.NotFound();
+
+            // Antes de qualquer outra coisa: ninguem se apaga. Um admin que se exclui
+            // sai do sistema no meio da propria requisicao e nao tem como voltar.
+            if (Guid.TryParse(quem.FindFirstValue("sub"), out var eu) && eu == id)
+                return RegraDeExclusao.Recusa("Nao da para excluir o seu proprio usuario.");
+
+            if (usuario.Ativo)
+                return RegraDeExclusao.Recusa(
+                    "Este funcionario ainda esta ativo. Desative primeiro — so isso ja tira o "
+                    + "acesso dele na hora — e exclua depois, se quiser tirar o cadastro tambem.");
+
+            var agendamentos = await db.Agendamentos.CountAsync(a => a.BarbeiroId == id);
+
+            if (agendamentos > 0)
+                return RegraDeExclusao.Recusa(
+                    RegraDeExclusao.Contagem(agendamentos, "agendamento esta", "agendamentos estao")
+                    + " no nome deste funcionario, e o historico da agenda depende dele para dizer "
+                    + "quem atendeu. Deixe inativo: ele nao entra mais e nao aparece para marcar.");
+
+            // Fechou caixa de atendimento de outra pessoa. FechadoPorId nao e chave
+            // estrangeira, entao o banco deixaria excluir — e o registro do caixa
+            // passaria a apontar para um id que nao existe mais, sem ninguem perceber.
+            var fechamentos = await db.Agendamentos.CountAsync(a => a.FechadoPorId == id);
+
+            if (fechamentos > 0)
+                return RegraDeExclusao.Recusa(
+                    "Este funcionario fechou "
+                    + RegraDeExclusao.Contagem(fechamentos, "atendimento", "atendimentos")
+                    + " no caixa. Excluir o cadastro apagaria o nome de quem recebeu esse "
+                    + "dinheiro. Deixe inativo.");
+
+            // Expedientes, bloqueios e os vinculos com servico caem junto, por Cascade.
+            await db.Barbeiros.Where(x => x.Id == id).ExecuteDeleteAsync();
+
+            // Sem isso o guarda de sessao continuaria respondendo pela leitura guardada
+            // por ate 30 segundos. Nao e falha de seguranca — o cadastro estava inativo,
+            // e inativo ja e recusado — mas deixa a entrada morta ocupando o cache.
+            cache.Remove(GuardaDeSessao.Chave(id));
+
             return Results.Ok();
         });
 

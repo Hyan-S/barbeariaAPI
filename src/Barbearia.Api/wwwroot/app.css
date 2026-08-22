@@ -29,7 +29,19 @@
   /* Altura real do cabecalho fixo. O valor abaixo e so o palpite inicial: o
      app.js remede depois de carregar, porque o topo quebra em duas linhas em
      tela estreita e a lateral fixa e a altura do painel dependem disso. */
+  /* Altura real do topo. O valor daqui e so o primeiro quadro: o app.js mede o
+     cabecalho de verdade e sobrescreve, porque ele muda com a largura, com a fonte
+     do sistema e com a faixa do notch. Tudo que fica grudado embaixo dele (avisos,
+     abas, menu lateral) se apoia nesta variavel, e nao em numero chutado. */
   --altura-topo: 57px;
+
+  /* Faixas que o sistema reserva: notch em cima, barra de gestos embaixo, notch
+     lateral no modo paisagem. Fora do celular env(...) vale 0, entao a conta some
+     sozinha no computador. */
+  --seguro-topo: env(safe-area-inset-top, 0px);
+  --seguro-baixo: env(safe-area-inset-bottom, 0px);
+  --seguro-esq: env(safe-area-inset-left, 0px);
+  --seguro-dir: env(safe-area-inset-right, 0px);
 }
 
 :root[data-tema="escuro"] {
@@ -84,7 +96,9 @@ body {
 header.topo {
   background: var(--superficie);
   border-bottom: 1px solid var(--linha);
-  padding: 13px 20px;
+  /* O respiro de cima soma o notch: com viewport-fit=cover a pagina passa a ocupar
+     a tela toda, e sem isso o titulo ficaria por baixo do relogio do celular. */
+  padding: calc(13px + var(--seguro-topo)) calc(20px + var(--seguro-dir)) 13px calc(20px + var(--seguro-esq));
   display: flex;
   align-items: center;
   gap: 14px;
@@ -132,7 +146,7 @@ nav.abas {
   border-bottom: 1px solid var(--linha);
   overflow-x: auto;
   position: sticky;
-  top: 59px;
+  top: var(--altura-topo);
   z-index: 9;
 }
 
@@ -154,7 +168,11 @@ nav.abas button.ativa { color: var(--latao); border-bottom-color: var(--latao); 
 
 /* O respiro de baixo soma a faixa de gestos do celular (env(...) e 0 no
    desktop), senao o ultimo botao fica embaixo da barra do sistema. */
-main { max-width: 940px; margin: 0 auto; padding: 24px 16px calc(72px + env(safe-area-inset-bottom)); }
+main {
+  max-width: 940px;
+  margin: 0 auto;
+  padding: 24px calc(16px + var(--seguro-dir)) calc(72px + var(--seguro-baixo)) calc(16px + var(--seguro-esq));
+}
 
 .card {
   background: var(--superficie);
@@ -283,7 +301,7 @@ th {
 
 #msg.aviso {
   position: sticky;
-  top: 67px;
+  top: var(--altura-topo);
   z-index: 8;
   box-shadow: var(--sombra);
   background-color: var(--superficie);
@@ -295,8 +313,8 @@ th {
 
 .rede {
   position: fixed;
-  right: 18px;
-  bottom: 18px;
+  right: calc(18px + var(--seguro-dir));
+  bottom: calc(18px + var(--seguro-baixo));
   z-index: 60;
   display: flex;
   align-items: center;
@@ -334,7 +352,13 @@ th {
 @keyframes girar-rede { to { transform: rotate(360deg); } }
 
 @media (max-width: 620px) {
-  .rede { right: 12px; left: 12px; bottom: 12px; max-width: none; justify-content: center; }
+  .rede {
+    right: calc(12px + var(--seguro-dir));
+    left: calc(12px + var(--seguro-esq));
+    bottom: calc(12px + var(--seguro-baixo));
+    max-width: none;
+    justify-content: center;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -417,14 +441,26 @@ th {
 a { color: var(--latao); }
 
 @media (max-width: 620px) {
-  nav.abas { top: 55px; }
+  /* nav.abas e #msg.aviso seguem a variavel, entao nao precisam de valor proprio
+     por faixa de largura — era ai que sobrava conteudo aparecendo por baixo. */
   .card { padding: 16px; }
-  main { padding: 16px 12px calc(60px + env(safe-area-inset-bottom)); }
+  main { padding: 16px calc(12px + var(--seguro-dir)) calc(60px + var(--seguro-baixo)) calc(12px + var(--seguro-esq)); }
 
-  header.topo { padding: 11px 13px; gap: 10px; }
+  /* Encurta o respiro no celular sem apagar a faixa do notch: o atalho
+     "padding" zerava a conta de cima que o topo precisa. */
+  header.topo {
+    padding: calc(11px + var(--seguro-topo)) calc(13px + var(--seguro-dir)) 11px calc(13px + var(--seguro-esq));
+    gap: 10px;
+  }
   header.topo h1 { font-size: 15px; }
 
-  #msg.aviso { top: 62px; }
+  /* Uma linha so. O cabecalho fica grudado no alto, entao cada linha extra dele
+     rouba altura de toda a tela — em 360px ele chegava a 122px, um sexto do
+     aparelho. O titulo encurta com reticencias em vez de empurrar os botoes para
+     baixo. */
+  header.topo { flex-wrap: nowrap; }
+  header.topo .marca-topo { min-width: 0; }
+  header.topo h1 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   header.topo .quem { display: none; }
 
@@ -445,18 +481,35 @@ a { color: var(--latao); }
   .passo h3 { margin-bottom: 9px; }
 }
 
+/* Dedo nao tem a precisao do ponteiro: 44px e o piso que Apple e Google
+   recomendam, e vale para link estilizado de botao tambem — a regra antiga so
+   pegava <button>, entao o "Painel" do cabecalho ficava com 25px de altura. */
 @media (pointer: coarse) {
   button.btn,
+  a.btn,
   .lateral button,
   .periodos button,
   .horarios button,
   .opcoes button,
+  .abas button,
+  nav.abas button,
   .tema,
   .abrir-menu { min-height: 44px; }
 
-  button.btn.pequeno { min-height: 38px; padding: 8px 14px; }
+  button.btn.pequeno,
+  a.btn.pequeno { min-height: 44px; padding: 10px 14px; }
 
   .dias button { min-height: 62px; }
+
+  /* Some com o atraso de 300ms que o iOS guarda para ver se vem um segundo toque,
+     e com o retangulo azul que ele pinta em cima do que foi tocado. */
+  button, a, summary, label, input[type="checkbox"], input[type="radio"] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+  }
+
+  /* Toque longo em botao selecionava o texto dele em vez de acionar. */
+  button, .tema, .abrir-menu, nav.abas button, .abas button { user-select: none; }
 }
 
 @media (max-width: 860px) {
@@ -541,10 +594,13 @@ a { color: var(--latao); }
   .lateral {
     position: fixed;
     top: 0; left: 0; bottom: 0;
-    width: 262px;
+    width: calc(262px + var(--seguro-esq));
     z-index: 30;
     max-height: none;
-    padding-top: 22px;
+    /* O menu cobre a tela toda, inclusive por tras do notch e da barra de gestos. */
+    padding-top: calc(22px + var(--seguro-topo));
+    padding-bottom: calc(40px + var(--seguro-baixo));
+    padding-left: calc(12px + var(--seguro-esq));
     transform: translateX(-100%);
     transition: transform .22s ease;
     box-shadow: 0 0 40px rgba(0, 0, 0, .3);
@@ -559,7 +615,9 @@ a { color: var(--latao); }
     z-index: 29;
   }
 
-  .conteudo { padding: 18px 14px 60px; }
+  .conteudo {
+    padding: 18px calc(14px + var(--seguro-dir)) calc(60px + var(--seguro-baixo)) calc(14px + var(--seguro-esq));
+  }
 }
 
 .periodos { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
@@ -687,6 +745,36 @@ td.quando { white-space: nowrap; }
 @media (max-width: 860px) {
   #secao-agenda table th, #secao-agenda table td { white-space: nowrap; }
 }
+
+/* Cabecalho de faixa do dashboard. As tres faixas respondem a perguntas
+   diferentes — quanto entrou hoje, como foi o periodo, e onde o movimento se
+   concentra — e sem titulo separando elas o dono passava reto por nove cartoes
+   de peso igual, todos com a mesma cara. */
+.faixa {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin: 28px 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--linha);
+}
+
+.faixa:first-child { margin-top: 0; }
+.faixa h3 { margin: 0; font-size: 15.5px; font-weight: 660; letter-spacing: -.01em; }
+.faixa span { font-size: 12.5px; color: var(--texto-suave); }
+
+/* Linha de produto no fechamento do atendimento. */
+.item-venda {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--linha);
+}
+
+.item-venda .nome { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.item-venda input[type="number"] { width: 68px; }
 
 .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr)); gap: 12px; margin-bottom: 18px; }
 

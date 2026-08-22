@@ -121,6 +121,9 @@ const ROTULOS = [
   ['GET',    /^\/api\/disponibilidade$/,                        'Buscando horarios livres',   'Horarios carregados'],
 
   ['POST',   /^\/api\/agendamentos\/[^/]+\/cancelar$/,          'Cancelando o horario',       'Horario cancelado'],
+  ['POST',   /^\/api\/gestor\/agendamentos\/[^/]+\/fechar$/,    'Encerrando o atendimento',   'Atendimento encerrado'],
+  ['POST',   /^\/api\/gestor\/agendamentos\/[^/]+\/reabrir$/,   'Reabrindo o atendimento',    'Atendimento reaberto'],
+  ['GET',    /^\/api\/dashboard\/caixa$/,                     'Somando o caixa',            'Caixa somado'],
   ['POST',   /^\/api\/agendamentos$/,                           'Confirmando o seu horario',  'Horario confirmado'],
   ['GET',    /^\/api\/agendamentos$/,                           'Carregando os seus horarios','Horarios carregados'],
 
@@ -133,8 +136,10 @@ const ROTULOS = [
   ['GET',    /^\/api\/gestor\/servicos$/,                       'Carregando servicos',        'Servicos carregados'],
   ['POST',   /^\/api\/gestor\/servicos$/,                       'Salvando o servico',         'Servico salvo'],
   ['PUT',    /^\/api\/gestor\/servicos\/[^/]+$/,                'Salvando o servico',         'Servico salvo'],
+  ['DELETE', /^\/api\/gestor\/servicos\/[^/]+$/,                'Excluindo o servico',        'Servico excluido'],
   ['GET',    /^\/api\/gestor\/expedientes$/,                    'Carregando o funcionamento', 'Funcionamento carregado'],
   ['POST',   /^\/api\/gestor\/expedientes$/,                    'Salvando o horario',         'Horario salvo'],
+  ['POST',   /^\/api\/gestor\/expedientes\/copiar$/,            'Copiando o funcionamento',   'Funcionamento copiado'],
   ['DELETE', /^\/api\/gestor\/expedientes\/[^/]+$/,             'Removendo o horario',        'Horario removido'],
   ['GET',    /^\/api\/gestor\/bloqueios$/,                      'Carregando bloqueios',       'Bloqueios carregados'],
   ['POST',   /^\/api\/gestor\/bloqueios$/,                      'Salvando o bloqueio',        'Bloqueio salvo'],
@@ -143,7 +148,7 @@ const ROTULOS = [
   ['GET',    /^\/api\/produtos$/,                               'Carregando produtos',        'Produtos carregados'],
   ['POST',   /^\/api\/produtos$/,                               'Salvando o produto',         'Produto salvo'],
   ['PUT',    /^\/api\/produtos\/[^/]+$/,                        'Salvando o produto',         'Produto salvo'],
-  ['DELETE', /^\/api\/produtos\/[^/]+$/,                        'Removendo o produto',        'Produto removido'],
+  ['DELETE', /^\/api\/produtos\/[^/]+$/,                        'Excluindo o produto',        'Produto excluido'],
 
   ['POST',   /^\/api\/cliente\/cadastro$/,                'Criando seu cadastro',       'Cadastro criado'],
   ['POST',   /^\/api\/cliente\/login$/,                   'Entrando',                   'Bem-vindo'],
@@ -166,6 +171,7 @@ const ROTULOS = [
   ['GET',    /^\/api\/clientes$/,                               'Carregando clientes',        'Clientes carregados'],
   ['GET',    /^\/api\/clientes\/[^/]+$/,                        'Abrindo o cliente',          'Cliente aberto'],
   ['PUT',    /^\/api\/clientes\/[^/]+$/,                        'Salvando o cliente',         'Cliente salvo'],
+  ['DELETE', /^\/api\/clientes\/[^/]+$/,                        'Excluindo o cliente',        'Cliente excluido'],
 
   ['GET',    /^\/api\/dashboard/,                               'Montando o dashboard',       'Dashboard pronto'],
 
@@ -175,6 +181,7 @@ const ROTULOS = [
   ['GET',    /^\/api\/admin\/usuarios$/,                        'Carregando funcionarios',    'Funcionarios carregados'],
   ['POST',   /^\/api\/admin\/usuarios$/,                        'Cadastrando o funcionario',  'Funcionario cadastrado'],
   ['PUT',    /^\/api\/admin\/usuarios\/[^/]+$/,                 'Salvando o funcionario',     'Funcionario salvo'],
+  ['DELETE', /^\/api\/admin\/usuarios\/[^/]+$/,                 'Excluindo o funcionario',    'Funcionario excluido'],
   ['GET',    /^\/api\/admin\/pessoas$/,                         'Carregando pessoas',         'Pessoas carregadas'],
   ['GET',    /^\/api\/admin\/permissoes$/,                      'Carregando permissoes',      'Permissoes carregadas'],
   ['POST',   /^\/api\/admin\/permissoes$/,                      'Salvando a permissao',       'Permissao salva'],
@@ -252,7 +259,10 @@ async function api(caminho, opcoes = {}) {
   // Qual sessao mandar e decidido pela rota, nao por qual token existe. O dono da
   // barbearia pode estar logado nos dois papeis ao mesmo tempo; mandar o token do
   // painel para /api/cliente daria 403, e o token do cliente no painel daria 401.
-  const paraCliente = caminho.startsWith('/api/cliente');
+  // A barra no fim importa: '/api/clientes', que e a gestao de clientes no painel,
+  // tambem comeca com '/api/cliente'. Sem ela, abrir Painel > Clientes manda o token
+  // do cliente (ou nenhum), toma 401 e derruba o dono para agendar.html.
+  const paraCliente = caminho === '/api/cliente' || caminho.startsWith('/api/cliente/');
   const portador = paraCliente ? ClienteAuth.token : Auth.token;
 
   if (portador) cabecalhos['Authorization'] = 'Bearer ' + portador;
@@ -417,6 +427,39 @@ function ligarMascaraTelefone(input) {
 function ligarMascarasTelefone(...ids) {
   ids.forEach(id => ligarMascaraTelefone(document.getElementById(id)));
 }
+
+// ---------- Altura do cabecalho ----------
+
+// Tudo que fica grudado embaixo do cabecalho — o aviso, as abas, o menu lateral —
+// se apoia em --altura-topo. Aqui ela e medida em vez de chutada: a altura do topo
+// muda com a largura da tela, com a fonte do sistema e com a faixa do notch, e cada
+// numero fixo que existia no CSS (59px, 67px, 55px, 62px) errava em algum aparelho,
+// deixando conteudo aparecer por baixo da barra.
+function medirTopo() {
+  const topo = document.querySelector('header.topo');
+  if (!topo) return;
+
+  const altura = Math.round(topo.getBoundingClientRect().height);
+  if (altura > 0) document.documentElement.style.setProperty('--altura-topo', altura + 'px');
+}
+
+function acompanharTopo() {
+  medirTopo();
+
+  const topo = document.querySelector('header.topo');
+
+  // O cabecalho e preenchido depois, pelo montarCabecalho de cada tela, e ainda
+  // muda de altura quando o conteudo quebra em duas linhas. O observador cobre os
+  // dois casos sem precisar de gancho em cada pagina.
+  if (topo && 'ResizeObserver' in window) new ResizeObserver(medirTopo).observe(topo);
+
+  // Girar o aparelho troca as faixas do sistema de lugar; o iOS mede errado se a
+  // conta acontecer no mesmo instante do evento.
+  addEventListener('orientationchange', () => setTimeout(medirTopo, 150));
+}
+
+if (document.readyState === 'loading') addEventListener('DOMContentLoaded', acompanharTopo);
+else acompanharTopo();
 
 function dataHoje() {
   const agora = new Date();

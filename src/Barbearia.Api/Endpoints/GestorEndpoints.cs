@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Barbearia.Application;
 using Barbearia.Application.Agendamentos;
 using Barbearia.Application.Disponibilidade;
@@ -10,6 +11,16 @@ namespace Barbearia.Api.Endpoints;
 
 public static class GestorEndpoints
 {
+    public record ItemVendidoRequest(Guid ProdutoId, int Quantidade);
+
+    public record FechamentoRequest(
+        int? ValorCobradoCentavos, string? FormaPagamento, List<ItemVendidoRequest>? Produtos);
+
+    // Teto de digitacao. Nao e regra de negocio: e para um zero a mais nao virar
+    // R$ 400.000 no caixa do dia sem ninguem perceber.
+    private const int TetoValorCentavos = 5_000_000;
+    private const int TetoQuantidade = 99;
+
     public record ServicoRequest(
         string Nome, int DuracaoMinutos, int PrecoCentavos, bool Ativo, Guid[]? BarbeiroIds);
 
@@ -26,6 +37,7 @@ public static class GestorEndpoints
             db.BarbeiroServicos.Add(new BarbeiroServico { ServicoId = servicoId, BarbeiroId = barbeiroId });
     }
     public record ExpedienteRequest(Guid BarbeiroId, int DiaSemana, string HoraInicio, string HoraFim);
+    public record CopiarFuncionamento(Guid BarbeiroId);
     public record BloqueioRequest(Guid BarbeiroId, DateTime InicioLocal, DateTime FimLocal, string? Motivo);
 
     public record ReagendarRequest(DateTime NovoInicioUtc, Guid? BarbeiroId);
@@ -101,15 +113,26 @@ public static class GestorEndpoints
                     .Select(p => new
                     {
                         p.AgendamentoId,
+                        p.ProdutoId,
                         produto = p.Produto!.Nome,
-                        precoCentavos = p.Produto.PrecoCentavos,
-                        tipo = p.Tipo
+                        // Vendido leva o preco congelado na venda; o resto e so
+                        // intencao do cliente, e ai vale a tabela de hoje.
+                        precoCentavos = p.Vendido && p.PrecoCentavosNaVenda != null
+                            ? p.PrecoCentavosNaVenda.Value
+                            : p.Produto.PrecoCentavos,
+                        tipo = p.Tipo,
+                        p.Vendido,
+                        p.Quantidade
                     })
                     .ToListAsync())
                 .GroupBy(p => p.AgendamentoId)
                 .ToDictionary(
                     g => g.Key,
-                    g => g.Select(p => new { p.produto, p.precoCentavos, tipo = p.tipo.ToString() })
+                    g => g.Select(p => new
+                          {
+                              p.ProdutoId, p.produto, p.precoCentavos,
+                              tipo = p.tipo.ToString(), p.Vendido, p.Quantidade
+                          })
                           .OrderBy(p => p.produto)
                           .ToList());
 
@@ -123,7 +146,9 @@ public static class GestorEndpoints
                     concluidos = lista.Count(a => a.Status == StatusAgendamento.Concluido),
                     cancelados = lista.Count(a => a.Status == StatusAgendamento.Cancelado),
                     minutos = ativos.Sum(a => (int)(a.FimUtc - a.InicioUtc).TotalMinutes),
-                    receitaCentavos = ativos.Sum(a => a.Servico!.PrecoCentavos)
+                    receitaCentavos = ativos.Sum(a => (long)a.PrecoCentavos),
+                    fechados = ativos.Count(a => a.EstaFechado),
+                    caixaCentavos = ativos.Sum(a => (long)(a.ValorCobradoCentavos ?? 0))
                 },
                 itens = exibir.Select(a => new
                 {
@@ -135,12 +160,16 @@ public static class GestorEndpoints
                     telefone = TelefoneBr.Formatar(a.Cliente.Telefone),
                     servico = a.Servico!.Nome,
                     a.ServicoId,
-                    precoCentavos = a.Servico.PrecoCentavos,
+                    precoCentavos = a.PrecoCentavos,
                     barbeiro = a.Barbeiro!.Nome,
                     a.BarbeiroId,
                     status = a.Status.ToString(),
                     origem = a.Origem.ToString(),
                     a.Observacao,
+                    fechado = a.EstaFechado,
+                    a.ValorCobradoCentavos,
+                    forma = a.FormaPagamento?.ToString(),
+                    fechadoEm = a.FechadoEmUtc is null ? (DateTime?)null : Fuso.ParaLocal(a.FechadoEmUtc.Value),
                     produtos = pedidos.GetValueOrDefault(a.Id)
                 })
             });
@@ -205,6 +234,151 @@ public static class GestorEndpoints
 
         painel.MapPost("/agendamentos/{id:guid}/cancelar", async (Guid id, AgendamentoService servico) =>
             await servico.CancelarAsync(id, null, false) ? Results.Ok() : Results.NotFound());
+
+        // Fechamento do atendimento: o unico lugar do sistema onde se registra que o
+        // dinheiro entrou. O valor cobrado vale para o servico; produto entra por
+        // fora, com o preco congelado no item, para o caixa poder separar depois
+        // quanto veio de servico e quanto veio de prateleira.
+        painel.MapPost("/agendamentos/{id:guid}/fechar", async (
+            Guid id, FechamentoRequest req, ClaimsPrincipal user, AppDbContext db) =>
+        {
+            var a = await db.Agendamentos.FirstOrDefaultAsync(x => x.Id == id);
+            if (a is null) return Results.NotFound();
+
+            if (a.Status == StatusAgendamento.Cancelado)
+                return Results.BadRequest(new { erro = "Agendamento cancelado nao pode ser fechado" });
+
+            if (a.EstaFechado)
+                return Results.Conflict(new { erro = "Este atendimento ja foi fechado" });
+
+            if (a.InicioUtc > DateTime.UtcNow)
+                return Results.BadRequest(new { erro = "O atendimento ainda nao comecou" });
+
+            if (!Enum.TryParse<FormaPagamento>(req.FormaPagamento, out var forma))
+                return Results.BadRequest(new { erro = "Informe a forma de pagamento" });
+
+            // Sem valor informado, cobra o preco combinado no agendamento. Zero e
+            // valido: cortesia acontece, e registrar zero e diferente de nao fechar.
+            var cobrado = req.ValorCobradoCentavos ?? a.PrecoCentavos;
+            if (cobrado < 0 || cobrado > TetoValorCentavos)
+                return Results.BadRequest(new { erro = "Valor cobrado invalido" });
+
+            var pedidos = await db.PedidosProduto
+                .Where(x => x.AgendamentoId == id)
+                .ToListAsync();
+
+            var itens = req.Produtos ?? [];
+
+            if (itens.Any(x => x.Quantidade < 1 || x.Quantidade > TetoQuantidade))
+                return Results.BadRequest(new { erro = "Quantidade invalida" });
+
+            if (itens.Select(x => x.ProdutoId).Distinct().Count() != itens.Count)
+                return Results.BadRequest(new { erro = "Produto repetido na lista" });
+
+            var ids = itens.Select(x => x.ProdutoId).ToList();
+            var produtos = await db.Produtos.Where(x => ids.Contains(x.Id)).ToListAsync();
+
+            if (produtos.Count != ids.Count)
+                return Results.BadRequest(new { erro = "Produto informado nao existe" });
+
+            long totalProdutos = 0;
+
+            foreach (var item in itens)
+            {
+                var produto = produtos.First(x => x.Id == item.ProdutoId);
+                var pedido = pedidos.FirstOrDefault(x => x.ProdutoId == item.ProdutoId);
+
+                if (pedido is null)
+                {
+                    // O cliente nao pediu na vitrine, levou na hora.
+                    pedido = new PedidoProduto
+                    {
+                        AgendamentoId = id, ProdutoId = produto.Id, Tipo = TipoPedido.Comprar
+                    };
+                    db.PedidosProduto.Add(pedido);
+                    pedidos.Add(pedido);
+                }
+
+                pedido.Vendido = true;
+                pedido.Quantidade = item.Quantidade;
+                pedido.PrecoCentavosNaVenda = produto.PrecoCentavos;
+
+                // Estoque nao vai a negativo: o numero do painel pode estar
+                // desatualizado, e travar a venda por causa disso atrapalharia o
+                // atendimento em vez de ajudar.
+                produto.Estoque = Math.Max(0, produto.Estoque - item.Quantidade);
+
+                totalProdutos += (long)produto.PrecoCentavos * item.Quantidade;
+            }
+
+            // O que o cliente marcou na vitrine e nao levou fica registrado como nao
+            // vendido, em vez de continuar parecendo pedido em aberto.
+            foreach (var sobra in pedidos.Where(x => !ids.Contains(x.ProdutoId)))
+            {
+                sobra.Vendido = false;
+                sobra.PrecoCentavosNaVenda = null;
+            }
+
+            a.ValorCobradoCentavos = cobrado;
+            a.FormaPagamento = forma;
+            a.FechadoEmUtc = DateTime.UtcNow;
+            a.Status = StatusAgendamento.Concluido;
+
+            if (Guid.TryParse(user.FindFirstValue("sub"), out var quem)) a.FechadoPorId = quem;
+
+            await db.SaveChangesAsync();
+
+            return Results.Ok(new
+            {
+                servicoCentavos = cobrado,
+                produtosCentavos = totalProdutos,
+                totalCentavos = cobrado + totalProdutos,
+                descontoCentavos = Math.Max(0, a.PrecoCentavos - cobrado),
+                forma = forma.ToString(),
+                fechadoEm = Fuso.ParaLocal(a.FechadoEmUtc!.Value)
+            });
+        });
+
+        // Reabrir apaga um registro de caixa, entao fica na Gestao e nao no painel:
+        // corrigir o proprio erro de digitacao e uma coisa, poder desfazer o caixa de
+        // qualquer dia e outra.
+        g.MapPost("/agendamentos/{id:guid}/reabrir", async (Guid id, AppDbContext db) =>
+        {
+            var a = await db.Agendamentos.FirstOrDefaultAsync(x => x.Id == id);
+            if (a is null) return Results.NotFound();
+
+            if (!a.EstaFechado)
+                return Results.BadRequest(new { erro = "Este atendimento nao esta fechado" });
+
+            var vendidos = await db.PedidosProduto
+                .Where(x => x.AgendamentoId == id && x.Vendido)
+                .ToListAsync();
+
+            if (vendidos.Count > 0)
+            {
+                var idsVendidos = vendidos.Select(x => x.ProdutoId).ToList();
+                var produtos = await db.Produtos.Where(x => idsVendidos.Contains(x.Id)).ToListAsync();
+
+                foreach (var pedido in vendidos)
+                {
+                    // Devolve ao estoque o que a venda tirou.
+                    var produto = produtos.FirstOrDefault(x => x.Id == pedido.ProdutoId);
+                    if (produto is not null) produto.Estoque += pedido.Quantidade;
+
+                    pedido.Vendido = false;
+                    pedido.PrecoCentavosNaVenda = null;
+                }
+            }
+
+            a.ValorCobradoCentavos = null;
+            a.FormaPagamento = null;
+            a.FechadoEmUtc = null;
+            a.FechadoPorId = null;
+            a.Status = StatusAgendamento.Confirmado;
+
+            await db.SaveChangesAsync();
+            return Results.Ok();
+        });
 
         painel.MapPost("/agendamentos", async (
             AgendamentoPeloPainel req, AgendamentoService servico, AppDbContext db) =>
@@ -280,6 +454,13 @@ public static class GestorEndpoints
 
         servicos.MapPost("/servicos", async (ServicoRequest req, AppDbContext db) =>
         {
+            // Nome vazio nao era recusado em lugar nenhum: entrava um servico sem nome, que
+            // aparecia como linha em branco na tela de agendar e nao dava para escolher. E
+            // nome nulo era pior — o Trim logo abaixo estourava, e a resposta virava 500 em
+            // vez de dizer o que faltava.
+            if (string.IsNullOrWhiteSpace(req.Nome))
+                return Results.BadRequest(new { erro = "Informe o nome do servico" });
+
             if (req.DuracaoMinutos is < 5 or > 480)
                 return Results.BadRequest(new { erro = "Duracao deve ficar entre 5 e 480 minutos" });
 
@@ -303,6 +484,9 @@ public static class GestorEndpoints
             var servico = await db.Servicos.FirstOrDefaultAsync(s => s.Id == id);
             if (servico is null) return Results.NotFound();
 
+            if (string.IsNullOrWhiteSpace(req.Nome))
+                return Results.BadRequest(new { erro = "Informe o nome do servico" });
+
             if (req.DuracaoMinutos is < 5 or > 480)
                 return Results.BadRequest(new { erro = "Duracao deve ficar entre 5 e 480 minutos" });
 
@@ -320,17 +504,106 @@ public static class GestorEndpoints
             return Results.Ok();
         });
 
+        // Tira o servico do banco de vez. So o inativo sai, e so se nenhum agendamento
+        // aponta para ele: o motivo das duas travas esta em RegraDeExclusao.
+        servicos.MapDelete("/servicos/{id:guid}", async (Guid id, AppDbContext db) =>
+        {
+            var servico = await db.Servicos.AsNoTracking()
+                .Where(s => s.Id == id)
+                .Select(s => new { s.Ativo })
+                .FirstOrDefaultAsync();
+
+            if (servico is null) return Results.NotFound();
+
+            if (servico.Ativo)
+                return RegraDeExclusao.Recusa(
+                    "Este servico ainda esta ativo. Desative, confira que a agenda nao precisa "
+                    + "mais dele, e ai exclua.");
+
+            var agendamentos = await db.Agendamentos.CountAsync(a => a.ServicoId == id);
+
+            if (agendamentos > 0)
+                return RegraDeExclusao.Recusa(
+                    RegraDeExclusao.Contagem(agendamentos, "agendamento usa", "agendamentos usam")
+                    + " este servico, e apagar o servico apagaria o registro deles. Deixe inativo: "
+                    + "assim ele nao aparece mais para marcar e o historico continua de pe.");
+
+            // Os vinculos em barbeiro_servicos caem junto, pelo Cascade do banco. Nao
+            // apago aqui de proposito: uma instrucao so, sem transacao para coordenar.
+            await db.Servicos.Where(s => s.Id == id).ExecuteDeleteAsync();
+            return Results.Ok();
+        });
+
+        // A tela listava as faixas sem dizer de quem eram, e era assim que o bug se
+        // escondia: quem cadastrava um profissional novo via a tabela cheia de linhas —
+        // as dos outros — e concluia que o horario estava resolvido. Agora vem o nome
+        // junto, e vem tambem quem atende sem nenhuma faixa cadastrada, que e
+        // exatamente quem nao aparece para o cliente marcar.
         g.MapGet("/expedientes", async (AppDbContext db) =>
-            await db.Expedientes.AsNoTracking()
-                .OrderBy(e => e.DiaSemana).ThenBy(e => e.HoraInicio)
+        {
+            var expedientes = await db.Expedientes.AsNoTracking()
+                .OrderBy(e => e.Barbeiro!.Nome).ThenBy(e => e.DiaSemana).ThenBy(e => e.HoraInicio)
                 .Select(e => new
                 {
                     e.Id, e.BarbeiroId,
+                    barbeiro = e.Barbeiro!.Nome,
                     diaSemana = (int)e.DiaSemana,
                     horaInicio = e.HoraInicio.ToString("HH:mm"),
                     horaFim = e.HoraFim.ToString("HH:mm")
                 })
-                .ToListAsync());
+                .ToListAsync();
+
+            var semHorario = await db.Barbeiros.AsNoTracking()
+                .Where(b => b.Ativo && b.Atende && !b.Expedientes.Any())
+                .OrderBy(b => b.Nome)
+                .Select(b => new { b.Id, b.Nome })
+                .ToListAsync();
+
+            var temModelo = (await FuncionamentoDaBarbearia.ModeloAsync(db)).Count > 0;
+
+            return Results.Ok(new { expedientes, semHorario, temModelo });
+        });
+
+        // Da ao profissional o mesmo funcionamento que a barbearia pratica. E o conserto
+        // de quem foi cadastrado antes desta versao, quando o funcionario nascia sem
+        // expediente nenhum e por isso nao aparecia para marcar.
+        g.MapPost("/expedientes/copiar", async (CopiarFuncionamento req, AppDbContext db) =>
+        {
+            var barbeiro = await db.Barbeiros.AsNoTracking()
+                .Where(b => b.Id == req.BarbeiroId)
+                .Select(b => new { b.Nome, b.Atende })
+                .FirstOrDefaultAsync();
+
+            if (barbeiro is null) return Results.NotFound();
+
+            if (!barbeiro.Atende)
+                return Results.BadRequest(new
+                {
+                    erro = $"{barbeiro.Nome} esta marcado como quem nao atende, entao nao entra na "
+                           + "agenda. Marque \"Atende clientes\" no cadastro se ele for pegar horario."
+                });
+
+            // Nao mistura com o que ja existe: duas faixas sobrepostas no mesmo dia fazem
+            // o mesmo horario aparecer duas vezes para o cliente.
+            if (await db.Expedientes.AnyAsync(e => e.BarbeiroId == req.BarbeiroId))
+                return Results.Conflict(new
+                {
+                    erro = $"{barbeiro.Nome} ja tem horario cadastrado. Apague as faixas dele antes "
+                           + "de copiar o funcionamento da barbearia."
+                });
+
+            var criados = await FuncionamentoDaBarbearia.AplicarAsync(db, req.BarbeiroId);
+
+            if (criados == 0)
+                return Results.Conflict(new
+                {
+                    erro = "Nenhum profissional ativo tem horario cadastrado, entao nao existe "
+                           + "funcionamento para copiar. Cadastre as faixas de um deles primeiro."
+                });
+
+            await db.SaveChangesAsync();
+            return Results.Ok(new { criados });
+        });
 
         g.MapPost("/expedientes", async (ExpedienteRequest req, AppDbContext db) =>
         {

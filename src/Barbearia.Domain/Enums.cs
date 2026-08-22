@@ -22,6 +22,18 @@ public enum Perfil
     Barbeiro = 2
 }
 
+// Como o dinheiro entrou. Sem isso o caixa do dia nao fecha com a gaveta: o dono
+// precisa saber quanto foi dinheiro, quanto foi Pix e quanto cai na maquininha
+// depois.
+public enum FormaPagamento
+{
+    Dinheiro = 0,
+    Pix = 1,
+    Debito = 2,
+    Credito = 3,
+    Outro = 4
+}
+
 public enum TipoPedido
 {
     Usar = 0,
