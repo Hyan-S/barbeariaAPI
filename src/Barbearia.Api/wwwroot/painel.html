@@ -391,6 +391,7 @@
         <div class="campo">
           <label for="fForma">Forma de pagamento</label>
           <select id="fForma">
+            <option value="">Escolha a forma</option>
             <option value="Dinheiro">Dinheiro</option>
             <option value="Pix">Pix</option>
             <option value="Debito">Debito</option>
@@ -1932,6 +1933,9 @@ async function carregarAgenda() {
           <br><span class="preco">${esc(a.origem)}</span></td>
       <td>${a.status === 'Cancelado' ? '' : a.fechado
         ? `<span class="tag ok">${moeda(a.valorCobradoCentavos)} · ${esc(a.forma || '')}</span>`
+          + (Auth.pode(['Gestor'])
+            ? `<br><button class="btn pequeno neutro" data-reabrir="${esc(a.id)}">Corrigir</button>`
+            : '')
         : `${jaComecou(a.inicio) ? `<button class="btn pequeno" data-fechar="${esc(a.id)}">Encerrar</button>` : ''}
         <button class="btn pequeno neutro" data-mover="${esc(a.id)}"
           data-info="${esc((a.cliente || a.telefone) + ' — ' + a.servico)}">Reagendar</button>
@@ -1957,6 +1961,10 @@ async function carregarAgenda() {
 
   corpo.querySelectorAll('[data-fechar]').forEach(b => {
     b.onclick = () => abrirFechar(porId.get(b.dataset.fechar));
+  });
+
+  corpo.querySelectorAll('[data-reabrir]').forEach(b => {
+    b.onclick = () => reabrirAtendimento(b.dataset.reabrir, porId.get(b.dataset.reabrir));
   });
 }
 
@@ -2006,7 +2014,14 @@ async function abrirFechar(a) {
   document.getElementById('fValorAjuda').textContent =
     `Combinado no agendamento: ${moeda(a.precoCentavos)}. Mude o valor se houve desconto.`;
 
-  document.getElementById('fForma').value = 'Dinheiro';
+  // Nao repoe Dinheiro. Abre na ultima forma usada neste navegador, e na primeira
+  // vez abre vazio, obrigando a escolha. Nascendo em Dinheiro, quem nao clicava
+  // fechava tudo como dinheiro sem querer — e o caixa do dia saia com a cara de
+  // uma barbearia que nao aceita cartao, com Pix e maquininha somados na gaveta.
+  const forma = document.getElementById('fForma');
+  const ultima = localStorage.getItem('ultimaFormaPagamento') || '';
+  forma.value = [...forma.options].some(o => o.value === ultima) ? ultima : '';
+
   document.getElementById('fConfirmar').onclick = confirmarFechar;
   document.getElementById('fConfirmar').disabled = false;
   document.getElementById('fCancelar').onclick = () =>
@@ -2101,6 +2116,13 @@ async function confirmarFechar() {
     return;
   }
 
+  const forma = document.getElementById('fForma').value;
+
+  if (!forma) {
+    aviso(msg, 'Escolha a forma de pagamento: dinheiro, Pix, debito, credito ou outro.');
+    return;
+  }
+
   aviso(msg, '');
   botao.disabled = true;
 
@@ -2110,12 +2132,16 @@ async function confirmarFechar() {
         method: 'POST',
         body: JSON.stringify({
           valorCobradoCentavos: valor,
-          formaPagamento: document.getElementById('fForma').value,
+          formaPagamento: forma,
           produtos: fechItens
             .filter(i => i.marcado)
             .map(i => ({ produtoId: i.produtoId, quantidade: i.quantidade }))
         })
       });
+
+    // Guarda para a proxima abertura: repetir o que a barbearia usa de verdade e
+    // mais honesto do que voltar sempre para Dinheiro.
+    localStorage.setItem('ultimaFormaPagamento', forma);
 
     document.getElementById('cardFechar').classList.add('oculto');
 
@@ -2132,6 +2158,30 @@ async function confirmarFechar() {
   } finally {
     botao.disabled = false;
   }
+}
+
+// Nao existe editar fechamento: corrigir e reabrir e fechar de novo. O botao existe
+// porque a rota /reabrir ja existia sem nenhuma tela chamando ela — um atendimento
+// fechado na forma errada ficava errado para sempre, e era so por SQL que dava para
+// consertar. So a Gestao ve o botao porque so ela passa na politica da rota; mostrar
+// para o barbeiro seria oferecer um 403.
+async function reabrirAtendimento(id, a) {
+  const oque = a && a.valorCobradoCentavos != null
+    ? `${moeda(a.valorCobradoCentavos)} em ${a.forma}`
+    : 'este fechamento';
+
+  if (!confirm(`Corrigir o atendimento? ${oque} sai do caixa, os produtos vendidos `
+    + 'voltam para o estoque, e ele volta para a lista de quem falta encerrar — '
+    + 'depois voce encerra de novo com o valor e a forma certos.')) return;
+
+  aviso(msg, '');
+  try {
+    await api(`/api/gestor/agendamentos/${id}/reabrir`, { method: 'POST' });
+    aviso(msg, 'Atendimento reaberto e fora do caixa. Encerre de novo com os dados certos.', 'ok');
+
+    carregarAgenda();
+    if (Auth.permite('dashboard')) carregarDashboard();
+  } catch (e) { aviso(msg, e.message); }
 }
 
 function horas(min) {
