@@ -141,6 +141,9 @@ public static class AdminEndpoints
         g.MapPost("/usuarios", async (
             UsuarioRequest req, AppDbContext db, IHashDeSenha hash, ConfiguracaoService cfg) =>
         {
+            if (string.IsNullOrWhiteSpace(req.Email))
+                return Results.BadRequest(new { erro = "Informe o e-mail de login" });
+
             if (string.IsNullOrWhiteSpace(req.Senha) || req.Senha.Length < 8)
                 return Results.BadRequest(new { erro = "Senha provisoria precisa de no minimo 8 caracteres" });
 
@@ -216,6 +219,17 @@ public static class AdminEndpoints
             var usuario = await db.Barbeiros.FirstOrDefaultAsync(x => x.Id == id);
             if (usuario is null) return Results.NotFound();
 
+            // A edicao nao mexia no e-mail: o campo chegava aqui e era jogado fora, e o
+            // painel ainda desabilitava ele na tela. Quem tivesse nascido sem login ficava
+            // sem conserto pelo sistema — so por SQL na mao. Agora o login e editavel, que
+            // e como se arruma uma conta antiga sem e-mail e como se corrige um e-mail
+            // digitado errado.
+            if (string.IsNullOrWhiteSpace(req.Email))
+                return Results.BadRequest(new { erro = "Informe o e-mail de login" });
+
+            if (string.IsNullOrWhiteSpace(req.Nome))
+                return Results.BadRequest(new { erro = "Informe o nome" });
+
             if (!Enum.TryParse<Perfil>(req.Perfil, out var perfil))
                 return Results.BadRequest(new { erro = "Perfil invalido" });
             var deixaDeSerAdmin = usuario.Perfil == Perfil.Admin && (perfil != Perfil.Admin || !req.Ativo);
@@ -242,6 +256,13 @@ public static class AdminEndpoints
             var antes = (usuario.Perfil, usuario.Ativo, usuario.PodeGerenciarServicos,
                          usuario.PodeGerenciarProdutos, usuario.PodeGerenciarClientes);
 
+            var email = req.Email.Trim().ToLowerInvariant();
+
+            if (email != usuario.Email
+                && await db.Barbeiros.AnyAsync(x => x.Email.ToLower() == email && x.Id != id))
+                return Results.Conflict(new { erro = "Ja existe usuario com esse e-mail" });
+
+            usuario.Email = email;
             usuario.Nome = req.Nome.Trim();
             usuario.Telefone = TelefoneBr.Normalizar(req.Telefone);
             usuario.Perfil = perfil;

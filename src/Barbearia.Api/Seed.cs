@@ -23,16 +23,28 @@ public static class Seed
             Atende = false
         });
 
+        // O barbeiro de exemplo existe para a agenda funcionar na primeira subida: ele
+        // e quem carrega o expediente seg-sab, e e dele que o FuncionamentoDaBarbearia
+        // copia a grade quando o primeiro funcionario de verdade e cadastrado. Por isso
+        // continua ativo e atendendo.
+        //
+        // O que ele nao e: um login. Antes nascia como Gestor, com as tres permissoes e
+        // PrecisaTrocarSenha, e a senha era um Guid aleatorio que nao e mostrado nem
+        // guardado em lugar nenhum — ou seja, uma conta de gestao que aparecia na lista
+        // de funcionarios e que ninguem nunca conseguiria abrir. Quem tentava entrar com
+        // ela levava "E-mail ou senha invalidos" para sempre, sem nada na tela dizendo o
+        // porque, e o unico login que funcionava era o do ADMIN_EMAIL.
+        //
+        // Agora ele nasce sem e-mail: o painel mostra "sem login" na lista, e quando uma
+        // pessoa de verdade assumir essa cadeira o admin preenche e-mail e senha em
+        // Funcionarios. A senha aleatoria fica so porque a coluna e obrigatoria; sem
+        // e-mail ela nao e alcancavel por nenhum caminho de login.
         var barbeiro = new Barbeiro
         {
             Nome = "Joao Barbeiro",
-            Email = "joao@barbearia.local",
+            Email = string.Empty,
             SenhaHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString("N"), 12),
-            PrecisaTrocarSenha = true,
-            Perfil = Perfil.Gestor,
-            PodeGerenciarServicos = true,
-            PodeGerenciarProdutos = true,
-            PodeGerenciarClientes = true
+            Perfil = Perfil.Barbeiro
         };
 
         db.Barbeiros.Add(barbeiro);

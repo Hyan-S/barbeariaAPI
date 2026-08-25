@@ -37,6 +37,15 @@ public static class AuthEndpoints
         {
             var email = (req.Email ?? "").Trim().ToLowerInvariant();
 
+            // Recusado antes de encostar no banco. Conta sem e-mail existe de verdade —
+            // o barbeiro de exemplo do seed nasce assim, e o painel permite deixar uma
+            // conta antiga nesse estado ate alguem arrumar — e sem esta guarda um POST
+            // com e-mail vazio casaria justamente com essa linha. A senha aleatoria dela
+            // nao confere com nada, entao nunca foi um jeito de entrar; o que se evita
+            // aqui e a consulta inutil e o contador de falhas na chave vazia.
+            if (string.IsNullOrWhiteSpace(email))
+                return Results.Json(new { erro = "E-mail ou senha invalidos" }, statusCode: 401);
+
             var chaveTentativas = "login-falhas:" + email;
 
             var usuario = await db.Barbeiros

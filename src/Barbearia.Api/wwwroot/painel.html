@@ -915,6 +915,7 @@
         <div class="campo">
           <label for="uEmail">E-mail (login)</label>
           <input id="uEmail" type="email">
+          <p class="ajuda">E o que a pessoa digita na tela de entrada. Sem isto ela nao entra.</p>
         </div>
         <div class="campo">
           <label for="uTelefone">Telefone</label>
@@ -2601,7 +2602,7 @@ async function carregarUsuarios() {
     return `
     <tr>
       <td>${esc(u.nome)}${u.precisaTrocarSenha ? '<br><span class="tag erro">senha provisoria</span>' : ''}</td>
-      <td>${esc(u.email)}</td>
+      <td>${u.email ? esc(u.email) : '<span class="tag erro">sem login</span>'}</td>
       <td><span class="tag">${esc(u.perfil)}</span></td>
       <td>${u.perfil === 'Admin' ? '<span class="preco">tudo</span>' : (esc(perms.join(', ')) || '<span class="preco">nenhuma</span>')}</td>
       <td><span class="tag ${u.ativo ? 'ok' : 'erro'}">${u.ativo ? 'ativo' : 'inativo'}</span></td>
@@ -2642,8 +2643,12 @@ async function excluirUsuario(id, nome) {
 function editarUsuario(u) {
   document.getElementById('usuarioId').value = u.id;
   document.getElementById('uNome').value = u.nome;
+  // O campo ficava travado na edicao, e o servidor jogava fora o e-mail que chegava
+  // no PUT. Quem tivesse nascido sem login — ou com o login digitado errado — nao
+  // tinha conserto pela tela. Agora da para corrigir aqui mesmo; o servidor recusa
+  // vazio e recusa um e-mail que ja seja de outra pessoa.
   document.getElementById('uEmail').value = u.email;
-  document.getElementById('uEmail').disabled = true;
+  document.getElementById('uEmail').disabled = false;
   document.getElementById('uSenha').value = '';
   document.getElementById('uSenha').placeholder = 'deixe vazio para manter';
   document.getElementById("uTelefone").value = mascaraTelefone(u.telefone);
