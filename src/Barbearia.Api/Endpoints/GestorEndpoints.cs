@@ -175,13 +175,31 @@ public static class GestorEndpoints
             });
         });
 
+        // A grade que o painel usa para marcar e para remarcar. Existe separada da
+        // /api/disponibilidade publica por causa da antecedencia minima: ela vale para o
+        // cliente, que nao pode marcar em cima da hora sem a barbearia saber, e nao para
+        // quem esta atras do balcao com a pessoa na frente. Fica no grupo autenticado
+        // justamente porque dispensa essa trava.
+        painel.MapGet("/disponibilidade", async (
+            DateOnly data, Guid servicoId, Guid? barbeiroId, DisponibilidadeService disponibilidade) =>
+        {
+            var slots = await disponibilidade.ObterGradeDoDiaAsync(
+                data, servicoId, barbeiroId, dispensarAntecedencia: true);
+
+            return Results.Ok(slots.Select(s => new
+            {
+                s.BarbeiroId, s.BarbeiroNome, s.InicioUtc, s.Livre, hora = s.HoraFormatada
+            }));
+        });
+
         painel.MapGet("/agendamentos/{id:guid}/grade", async (
             Guid id, DateOnly data, AppDbContext db, DisponibilidadeService disponibilidade) =>
         {
             var a = await db.Agendamentos.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
             if (a is null) return Results.NotFound();
 
-            var slots = await disponibilidade.ObterGradeParaMoverAsync(data, a.ServicoId, id);
+            var slots = await disponibilidade.ObterGradeParaMoverAsync(
+                data, a.ServicoId, id, dispensarAntecedencia: true);
 
             return Results.Ok(slots.Select(s => new
             {
@@ -203,7 +221,7 @@ public static class GestorEndpoints
             var diaLocal = DateOnly.FromDateTime(Fuso.ParaLocal(req.NovoInicioUtc));
 
             var slots = await disponibilidade.ObterGradeParaMoverAsync(
-                diaLocal, a.ServicoId, id, req.BarbeiroId);
+                diaLocal, a.ServicoId, id, req.BarbeiroId, dispensarAntecedencia: true);
 
             var slot = slots.FirstOrDefault(s => s.InicioUtc == req.NovoInicioUtc && s.Livre);
             if (slot is null)
@@ -418,6 +436,7 @@ public static class GestorEndpoints
                 erro = resultado.Tipo switch
                 {
                     ResultadoTipo.HorarioIndisponivel => "Esse horario acabou de ser ocupado",
+                    ResultadoTipo.HorarioForaDaGrade => "Esse horario nao esta na agenda desse dia",
                     ResultadoTipo.ForaDaJanelaDeAgenda => "Data alem do limite configurado da agenda",
                     ResultadoTipo.ClienteBloqueado => "Cliente bloqueado",
                     ResultadoTipo.ServicoInvalido => "Servico indisponivel",

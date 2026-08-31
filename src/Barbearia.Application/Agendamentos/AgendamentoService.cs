@@ -12,6 +12,7 @@ public enum ResultadoTipo
 {
     Criado,
     HorarioIndisponivel,
+    HorarioForaDaGrade,
     ForaDaAntecedencia,
     ForaDaJanelaDeAgenda,
     ServicoInvalido,
@@ -75,7 +76,12 @@ public class AgendamentoService(
                 return new ResultadoAgendamento(ResultadoTipo.LimiteDeAgendamentosAtingido);
         }
 
-        var candidatos = await disponibilidade.ObterTodosLivresAsync(inicioUtc, servicoId, barbeiroId, ct);
+        // comoStaff atravessa ate a grade. Dispensar a antecedencia so na checagem de
+        // cima nao servia para nada: quem monta os candidatos e a grade, e ela cortava
+        // o mesmo horario que este metodo tinha acabado de liberar, entao o encaixe do
+        // balcao caia em "esse horario acabou de ser ocupado" com a cadeira vazia.
+        var candidatos = await disponibilidade.ObterTodosLivresAsync(
+            inicioUtc, servicoId, barbeiroId, comoStaff, ct);
 
         foreach (var slot in candidatos)
         {
@@ -109,10 +115,20 @@ public class AgendamentoService(
             }
         }
 
-        var sugestoes = await disponibilidade.SugerirProximosAsync(
-            inicioUtc, servicoId, barbeiroId, ct: ct);
+        // Nao gravou. Ou o horario nao existe na agenda desse dia (fora do expediente,
+        // fora do passo da grade, ou longo demais para caber antes da pausa), ou existe
+        // e esta tomado. Quem esta olhando a tela precisa saber qual dos dois: as duas
+        // coisas viravam "acabou de ser ocupado", que soa como desculpa quando o horario
+        // aparece livre na lista.
+        var existeNaGrade = await disponibilidade.ExisteNaGradeAsync(
+            inicioUtc, servicoId, barbeiroId, comoStaff, ct);
 
-        return new ResultadoAgendamento(ResultadoTipo.HorarioIndisponivel, Sugestoes: sugestoes);
+        var sugestoes = await disponibilidade.SugerirProximosAsync(
+            inicioUtc, servicoId, barbeiroId, dispensarAntecedencia: comoStaff, ct: ct);
+
+        return new ResultadoAgendamento(
+            existeNaGrade ? ResultadoTipo.HorarioIndisponivel : ResultadoTipo.HorarioForaDaGrade,
+            Sugestoes: sugestoes);
     }
 
     public async Task<bool> CancelarAsync(

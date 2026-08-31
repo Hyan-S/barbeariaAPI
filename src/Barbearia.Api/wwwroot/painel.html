@@ -1222,7 +1222,10 @@ async function carregarHorariosPainel() {
   if (!servicoId || !data) return;
 
   const barbeiroId = document.getElementById('agBarbeiro').value;
-  const slots = await api(`/api/disponibilidade?data=${data}&servicoId=${servicoId}&grade=true`
+
+  // Grade do painel, nao a publica: aqui os horarios dentro da antecedencia minima
+  // aparecem, porque quem esta no balcao precisa lancar o encaixe de quem ja chegou.
+  const slots = await api(`/api/gestor/disponibilidade?data=${data}&servicoId=${servicoId}`
     + (barbeiroId ? `&barbeiroId=${barbeiroId}` : ''));
 
   document.getElementById('agSemHorario').classList.toggle('oculto', slots.length > 0);

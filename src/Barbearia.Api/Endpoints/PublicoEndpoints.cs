@@ -154,6 +154,7 @@ public static class PublicoEndpoints
     private static string Mensagem(ResultadoTipo tipo) => tipo switch
     {
         ResultadoTipo.HorarioIndisponivel => "Esse horario acabou de ser ocupado",
+        ResultadoTipo.HorarioForaDaGrade => "Esse horario nao esta na agenda desse dia",
         ResultadoTipo.ForaDaAntecedencia => "Esse horario ja esta muito em cima",
         ResultadoTipo.ForaDaJanelaDeAgenda => "A agenda ainda nao abriu para essa data",
         ResultadoTipo.LimiteDeAgendamentosAtingido => "Voce ja tem agendamentos abertos demais",

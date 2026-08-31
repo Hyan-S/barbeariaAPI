@@ -8,18 +8,23 @@ namespace Barbearia.Application.Disponibilidade;
 
 public class DisponibilidadeService(IAppDbContext db, ConfiguracaoService configuracao)
 {
+    // dispensarAntecedencia e para quem atende, nao para quem marca pelo site: o
+    // funcionario precisa lancar o encaixe de quem ja esta na cadeira, e a antecedencia
+    // minima existe para o cliente nao marcar em cima da hora sem a barbearia saber.
     public Task<IReadOnlyList<Slot>> ObterDoDiaAsync(
-        DateOnly diaLocal, Guid servicoId, Guid? barbeiroId = null, CancellationToken ct = default) =>
-        CalcularAsync(diaLocal, servicoId, barbeiroId, false, null, ct);
+        DateOnly diaLocal, Guid servicoId, Guid? barbeiroId = null,
+        bool dispensarAntecedencia = false, CancellationToken ct = default) =>
+        CalcularAsync(diaLocal, servicoId, barbeiroId, false, null, dispensarAntecedencia, ct);
 
     public Task<IReadOnlyList<Slot>> ObterGradeParaMoverAsync(
         DateOnly diaLocal, Guid servicoId, Guid ignorar, Guid? barbeiroId = null,
-        CancellationToken ct = default) =>
-        CalcularAsync(diaLocal, servicoId, barbeiroId, true, ignorar, ct);
+        bool dispensarAntecedencia = false, CancellationToken ct = default) =>
+        CalcularAsync(diaLocal, servicoId, barbeiroId, true, ignorar, dispensarAntecedencia, ct);
 
     public Task<IReadOnlyList<Slot>> ObterGradeDoDiaAsync(
-        DateOnly diaLocal, Guid servicoId, Guid? barbeiroId = null, CancellationToken ct = default) =>
-        CalcularAsync(diaLocal, servicoId, barbeiroId, true, null, ct);
+        DateOnly diaLocal, Guid servicoId, Guid? barbeiroId = null,
+        bool dispensarAntecedencia = false, CancellationToken ct = default) =>
+        CalcularAsync(diaLocal, servicoId, barbeiroId, true, null, dispensarAntecedencia, ct);
 
     private async Task<IReadOnlyList<Slot>> CalcularAsync(
         DateOnly diaLocal,
@@ -27,6 +32,7 @@ public class DisponibilidadeService(IAppDbContext db, ConfiguracaoService config
         Guid? barbeiroId,
         bool incluirOcupados,
         Guid? ignorarAgendamentoId,
+        bool dispensarAntecedencia,
         CancellationToken ct = default)
     {
         var cfg = await configuracao.ObterBarbeariaAsync(ct);
@@ -67,10 +73,22 @@ public class DisponibilidadeService(IAppDbContext db, ConfiguracaoService config
 
         if (expedientes.Count == 0) return [];
 
+        // Ocupa a agenda tudo que nao foi cancelado — Concluido inclusive. Esta e a
+        // mesma condicao da trava do banco (EXCLUDE ... WHERE "Status" <> 2), e as duas
+        // precisam dizer a mesma coisa.
+        //
+        // Antes aqui estava (Pendente || Confirmado), o que deixava o Concluido de fora.
+        // Enquanto ninguem concluia nada isso nao aparecia; quando o fechamento de caixa
+        // entrou e passou a gravar Concluido, o intervalo do atendimento fechado voltava
+        // a ser oferecido como livre na tela e o insert batia na trava do banco. O
+        // AgendamentoService le a violacao como "esse barbeiro nao da, tenta o proximo",
+        // acaba os candidatos e responde "esse horario acabou de ser ocupado" — com o
+        // barbeiro livre, no dia certo, na hora certa. Pior: a sugestao seguinte saia
+        // desta mesma grade e devolvia o horario que acabou de ser recusado.
         var ocupados = await db.Agendamentos
             .AsNoTracking()
             .Where(x => ids.Contains(x.BarbeiroId)
-                        && (x.Status == StatusAgendamento.Pendente || x.Status == StatusAgendamento.Confirmado)
+                        && x.Status != StatusAgendamento.Cancelado
                         && (ignorarAgendamentoId == null || x.Id != ignorarAgendamentoId)
                         && x.InicioUtc < fimDiaUtc
                         && x.FimUtc > inicioDiaUtc)
@@ -87,7 +105,11 @@ public class DisponibilidadeService(IAppDbContext db, ConfiguracaoService config
 
         var indisponiveis = ocupados.Concat(bloqueios).ToLookup(x => x.BarbeiroId);
 
-        var minimoUtc = DateTime.UtcNow.AddMinutes(cfg.AntecedenciaMinimaMinutos);
+        // MinValue deixa a comparacao de baixo sempre passar, sem precisar de um segundo
+        // caminho no laco. Para quem atende, o dia inteiro esta na mesa.
+        var minimoUtc = dispensarAntecedencia
+            ? DateTime.MinValue
+            : DateTime.UtcNow.AddMinutes(cfg.AntecedenciaMinimaMinutos);
         var passo = TimeSpan.FromMinutes(cfg.IntervaloSlotMinutos);
         var duracao = TimeSpan.FromMinutes(servico.DuracaoMinutos);
 
@@ -123,9 +145,11 @@ public class DisponibilidadeService(IAppDbContext db, ConfiguracaoService config
         DateTime inicioUtc,
         Guid servicoId,
         Guid? barbeiroId = null,
+        bool dispensarAntecedencia = false,
         CancellationToken ct = default)
     {
-        var slots = await ObterTodosLivresAsync(inicioUtc, servicoId, barbeiroId, ct);
+        var slots = await ObterTodosLivresAsync(
+            inicioUtc, servicoId, barbeiroId, dispensarAntecedencia, ct);
         return slots.FirstOrDefault();
     }
 
@@ -133,11 +157,30 @@ public class DisponibilidadeService(IAppDbContext db, ConfiguracaoService config
         DateTime inicioUtc,
         Guid servicoId,
         Guid? barbeiroId = null,
+        bool dispensarAntecedencia = false,
         CancellationToken ct = default)
     {
         var diaLocal = DateOnly.FromDateTime(Fuso.ParaLocal(inicioUtc));
-        var slots = await ObterDoDiaAsync(diaLocal, servicoId, barbeiroId, ct);
+        var slots = await ObterDoDiaAsync(
+            diaLocal, servicoId, barbeiroId, dispensarAntecedencia, ct);
         return slots.Where(s => s.InicioUtc == inicioUtc).ToList();
+    }
+
+    // Separa "esse horario nao existe na agenda desse dia" de "existe e esta ocupado".
+    // Sem essa distincao as duas coisas chegavam como "esse horario acabou de ser
+    // ocupado": um horario fora do expediente, ou que nao cai no passo da grade, ou
+    // longo demais para caber antes do almoco, era anunciado como disputa por vaga.
+    public async Task<bool> ExisteNaGradeAsync(
+        DateTime inicioUtc,
+        Guid servicoId,
+        Guid? barbeiroId = null,
+        bool dispensarAntecedencia = false,
+        CancellationToken ct = default)
+    {
+        var diaLocal = DateOnly.FromDateTime(Fuso.ParaLocal(inicioUtc));
+        var grade = await ObterGradeDoDiaAsync(
+            diaLocal, servicoId, barbeiroId, dispensarAntecedencia, ct);
+        return grade.Any(s => s.InicioUtc == inicioUtc);
     }
 
     public async Task<IReadOnlyList<Slot>> SugerirProximosAsync(
@@ -146,6 +189,7 @@ public class DisponibilidadeService(IAppDbContext db, ConfiguracaoService config
         Guid? barbeiroId = null,
         int quantidade = 3,
         int diasParaVarrer = 7,
+        bool dispensarAntecedencia = false,
         CancellationToken ct = default)
     {
         var cfg = await configuracao.ObterBarbeariaAsync(ct);
@@ -157,7 +201,8 @@ public class DisponibilidadeService(IAppDbContext db, ConfiguracaoService config
             var dia = diaInicial.AddDays(i);
             if (dia > Fuso.HojeLocal().AddDays(cfg.DiasMaximosNoFuturo)) break;
 
-            candidatos.AddRange(await ObterDoDiaAsync(dia, servicoId, barbeiroId, ct));
+            candidatos.AddRange(await ObterDoDiaAsync(
+                dia, servicoId, barbeiroId, dispensarAntecedencia, ct));
         }
 
         return candidatos
