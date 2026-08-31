@@ -456,6 +456,38 @@ public static class GestorEndpoints
                 .Select(b => new { b.Id, b.Nome })
                 .ToListAsync());
 
+        // O espelho de /api/servicos/{id}/barbeiros: quais servicos este barbeiro faz.
+        //
+        // O vinculo e opt-in por servico, e nao por barbeiro: servico sem nenhum vinculo
+        // e feito por todo mundo, servico com vinculo e so de quem esta na lista. E a
+        // mesma leitura do DisponibilidadeService e da rota publica, e tem que continuar
+        // sendo — se aqui fosse "so o que esta vinculado", todo servico que ninguem
+        // vinculou desapareceria do painel, apesar de qualquer barbeiro poder fazer.
+        //
+        // Fica no grupo do painel, e nao no de Servicos: quem marca pelo balcao precisa
+        // desta lista, e nem todo funcionario com acesso a agenda pode mexer no catalogo.
+        painel.MapGet("/barbeiros/{id:guid}/servicos", async (Guid id, AppDbContext db) =>
+        {
+            var vinculos = await db.BarbeiroServicos.AsNoTracking()
+                .Select(x => new { x.ServicoId, x.BarbeiroId })
+                .ToListAsync();
+
+            var restritos = vinculos.Select(x => x.ServicoId).ToHashSet();
+            var liberados = vinculos
+                .Where(x => x.BarbeiroId == id)
+                .Select(x => x.ServicoId)
+                .ToHashSet();
+
+            var lista = await db.Servicos.AsNoTracking()
+                .Where(s => s.Ativo)
+                .OrderBy(s => s.DuracaoMinutos)
+                .Select(s => new { s.Id, s.Nome, s.DuracaoMinutos, s.PrecoCentavos })
+                .ToListAsync();
+
+            return Results.Ok(
+                lista.Where(s => !restritos.Contains(s.Id) || liberados.Contains(s.Id)));
+        });
+
         var servicos = app.MapGroup("/api/gestor").RequireAuthorization("Servicos");
 
         servicos.MapGet("/servicos", async (AppDbContext db) =>

@@ -994,6 +994,14 @@
 const msg = document.getElementById('msg');
 let barbeiros = [];
 
+// A carga de barbeiros que o boot dispara sem esperar. Quem precisa da lista pronta
+// espera por esta promessa em vez de torcer para ela ter chegado.
+let barbeirosProntos = null;
+
+// Se a tela de novo agendamento ja montou os dropdowns. Guarda a escolha de quem
+// estava no meio de um agendamento, saiu para outra aba e voltou.
+let agPreparado = false;
+
 const GESTAO = ['Gestor'];
 const SO_ADMIN = [];
 
@@ -1064,7 +1072,7 @@ function iniciar() {
   document.getElementById('reConfirmar').onclick = confirmarReagendamento;
   document.getElementById('reCancelar').onclick = fecharReagendar;
 
-  const barbeirosProntos = carregarBarbeiros();
+  barbeirosProntos = carregarBarbeiros();
   barbeirosProntos.then(carregarAgenda);
 
   if (Auth.permite('servicos')) {
@@ -1115,7 +1123,9 @@ function iniciar() {
       document.getElementById(id).oninput = atualizarBotaoAgendar);
     document.getElementById('agData').onchange = carregarHorariosPainel;
     document.getElementById('agServico').onchange = carregarHorariosPainel;
-    document.getElementById('agBarbeiro').onchange = carregarHorariosPainel;
+    // Trocar o barbeiro refaz a lista de servicos antes dos horarios, porque a lista
+    // depende dele. carregarServicosPainel chama carregarHorariosPainel no fim.
+    document.getElementById('agBarbeiro').onchange = carregarServicosPainel;
     document.getElementById('agConfirmar').onclick = confirmarPeloPainel;
   }
 
@@ -1169,18 +1179,55 @@ function trocarAbaCliente(qual) {
 }
 
 async function prepararNovoAgendamento() {
-  if (document.getElementById('agServico').options.length > 0) return;
+  // O boot nao espera a carga dos barbeiros, e agora a lista de servicos depende de
+  // qual barbeiro esta escolhido. Abrir esta aba antes da carga chegar montaria o
+  // dropdown de barbeiro vazio, e o guard logo abaixo congelaria esse estado.
+  await barbeirosProntos;
 
-  const servicos = await api('/api/servicos');
-  document.getElementById('agServico').innerHTML =
-    servicos.map(s => `<option value="${esc(s.id)}">${esc(s.nome)} (${s.duracaoMinutos}min)</option>`).join('');
+  if (agPreparado) return;
+  agPreparado = true;
 
   document.getElementById('agBarbeiro').innerHTML =
     '<option value="">Qualquer barbeiro</option>' +
     barbeiros.map(b => `<option value="${esc(b.id)}">${esc(b.nome)}</option>`).join('');
 
   document.getElementById('agData').value = dataHoje();
-  carregarHorariosPainel();
+  await carregarServicosPainel();
+}
+
+// A lista de servicos depende de quem vai atender: nem todo barbeiro faz tudo, e
+// oferecer um servico que ele nao faz so leva a "sem horario" sem explicar por que.
+// Com "Qualquer barbeiro" a lista e a completa, que e o que a agenda vai considerar.
+//
+// A escolha atual e preservada quando o novo barbeiro tambem faz aquele servico —
+// trocar de barbeiro nao pode jogar a selecao fora sem motivo.
+async function carregarServicosPainel() {
+  const select = document.getElementById('agServico');
+  const barbeiroId = document.getElementById('agBarbeiro').value;
+  const escolhidoAntes = select.value;
+
+  const servicos = barbeiroId
+    ? await api(`/api/gestor/barbeiros/${encodeURIComponent(barbeiroId)}/servicos`)
+    : await api('/api/servicos');
+
+  if (servicos.length === 0) {
+    // Acontece quando todo servico do catalogo tem vinculo e este barbeiro nao esta
+    // em nenhum. Sem aviso a tela ficava com o dropdown vazio e nenhuma pista.
+    select.innerHTML = '<option value="">Nenhum servico liberado para este barbeiro</option>';
+    document.getElementById('agHorarios').innerHTML = '';
+    document.getElementById('agSemHorario').classList.add('oculto');
+    agSlot = null;
+    atualizarBotaoAgendar();
+    return;
+  }
+
+  select.innerHTML = servicos
+    .map(s => `<option value="${esc(s.id)}">${esc(s.nome)} (${s.duracaoMinutos}min)</option>`)
+    .join('');
+
+  if (servicos.some(s => s.id === escolhidoAntes)) select.value = escolhidoAntes;
+
+  await carregarHorariosPainel();
 }
 
 async function buscarClienteParaAgendar() {
